@@ -5,3 +5,5 @@ out/
 *.class
 .idea/
 .vscode/
+bin/
+build/
