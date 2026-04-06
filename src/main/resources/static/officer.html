@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicPulse – Officer Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --ink: #0d1117; --ink-soft: #6b7280; --surface: #f0f2f7; --panel: #ffffff;
+            --officer: #10b981; --officer-soft: #ecfdf5; --officer-hover: #059669;
+            --border: #e4e7ef; --sidebar-w: 268px;
+            --pending: #f59e0b; --progress: #3b82f6; --resolved: #10b981; --closed: #9ca3af;
+        }
+        html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); }
+        .app { display: block; min-height: 100vh; }
+        .sidebar { background: var(--ink); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh; overflow-y: auto; z-index: 100; }
+        .sidebar-logo { padding: 24px 20px; display: flex; align-items: center; gap: 11px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .logo-mark { width: 36px; height: 36px; background: var(--officer); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: white; }
+        .officer-profile { margin: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.25); }
+        .officer-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: #6ee7b7; font-weight: 700; }
+        .officer-name { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; color: white; margin-top: 2px; }
+        .nav-group { padding: 16px 12px 4px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; color: rgba(255,255,255,0.5); font-size: 0.87rem; font-weight: 500; transition: all 0.15s; margin-bottom: 2px; text-decoration: none; }
+        .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
+        .nav-item.active { background: var(--officer); color: white; }
+        .sidebar-footer { margin-top: auto; padding: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
+        .logout-btn { width: 100%; padding: 10px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: #f87171; font-size: 0.84rem; cursor: pointer; }
+        .main { padding-left: var(--sidebar-w); min-height: 100vh; width: 100%; }
+        .topbar { background: var(--panel); border-bottom: 1px solid var(--border); padding: 15px 28px; position: sticky; top: 0; z-index: 50; }
+        .topbar-content { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; width: 100%; }
+        .topbar-left h1 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem; }
+        .content { padding: 28px; max-width: 1200px; margin: 0 auto; width: 100%; }
+        .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+        .filter-select { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 10px; background: white; cursor: pointer; }
+        .table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 12px 16px; text-align: left; font-size: 0.72rem; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; border-bottom: 1px solid var(--border); }
+        td { padding: 14px 16px; border-bottom: 1px solid #f1f3f8; font-size: 0.86rem; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+        .s-PENDING { background: #fef3c7; color: #92400e; }
+        .s-IN_PROGRESS { background: #dbeafe; color: #1e40af; }
+        .s-RESOLVED { background: #d1fae5; color: #065f46; }
+        .action-btn { padding: 6px 12px; background: var(--officer-soft); border: none; border-radius: 8px; color: var(--officer); font-size: 0.78rem; font-weight: 600; cursor: pointer; margin-right: 5px; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .overlay.show { display: flex; }
+        .modal { background: white; border-radius: 20px; width: 100%; max-width: 500px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+        .modal h2 { font-family: 'Syne', sans-serif; font-size: 1.2rem; margin-bottom: 10px; }
+        .field { margin-bottom: 15px; }
+        .field label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 5px; }
+        .field textarea, .field input { width: 100%; padding: 10px; border: 1.5px solid var(--border); border-radius: 10px; font-family: inherit; }
+        .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+        .btn { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; border: none; }
+        .btn-primary { background: var(--officer); color: white; }
+        .btn-secondary { background: var(--surface); color: var(--ink-soft); }
+        #toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 12px 20px; border-radius: 10px; display: none; z-index: 1000; }
+        .preview-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: 10px; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <nav class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-mark">👷</div>
+                <span class="logo-text">CivicPulse</span>
+            </div>
+            <div class="officer-profile">
+                <div class="officer-label">Department Officer</div>
+                <div class="officer-name" id="officerName">Officer</div>
+            </div>
+            <div class="nav-group">
+                <a class="nav-item" href="dashboard.html">Overview</a>
+                <a class="nav-item active" href="officer.html">Assigned Grievances</a>
+            </div>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">Sign Out</button>
+            </div>
+        </nav>
+        <div class="main">
+            <div class="topbar">
+                <div class="topbar-content">
+                    <div class="topbar-left">
+                        <h1>Officer Workspace</h1>
+                    </div>
+                </div>
+            </div>
+            <div class="content">
+                <div class="toolbar">
+                    <select class="filter-select" id="statusFilter" onchange="loadGrievances()">
+                        <option value="">All Status</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="RESOLVED">Resolved</option>
+                    </select>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#ID</th>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                                <th>Submitted</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="grievanceTable">
+                            <tr><td colspan="6" style="text-align:center;padding:20px">Loading assigned tasks...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPDATE MODAL -->
+    <div class="overlay" id="updateModal">
+        <div class="modal">
+            <h2 id="modalTitle">Update Grievance</h2>
+            <div class="field">
+                <label>Remarks</label>
+                <textarea id="remarks" rows="3" placeholder="Add progress notes..."></textarea>
+            </div>
+            <div id="resolveOnly" style="display:none">
+                <div class="field">
+                    <label>Resolution Image (Optional)</label>
+                    <input type="file" id="resImage" accept="image/*" onchange="previewFile()">
+                    <img id="preview" class="preview-img">
+                </div>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" id="saveBtn" onclick="submitUpdate()">Save Update</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        const token = localStorage.getItem('civicpulse_token');
+        const user = JSON.parse(localStorage.getItem('civicpulse_user') || '{}');
+        if (!token || user.role !== 'OFFICER') window.location.href = '/index.html';
+        
+        document.getElementById('officerName').textContent = user.username;
+
+        let grievances = [];
+        let currentId = null;
+        let isResolving = false;
+        let base64Image = '';
+
+        async function loadGrievances() {
+            try {
+                const res = await fetch('/api/module4/grievances/assigned', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                grievances = await res.json();
+                renderTable();
+            } catch (err) {
+                showToast('Error loading grievances');
+            }
+        }
+
+        function renderTable() {
+            const filter = document.getElementById('statusFilter').value;
+            const tbody = document.getElementById('grievanceTable');
+            const list = filter ? grievances.filter(g => g.status === filter) : grievances;
+            
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px">No assigned grievances found.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = list.map(g => `
+                <tr>
+                    <td>#${g.id}</td>
+                    <td><b>${g.title}</b></td>
+                    <td>${g.category}</td>
+                    <td><span class="badge s-${g.status}">${g.status}</span></td>
+                    <td>${new Date(g.submittedAt).toLocaleDateString()}</td>
+                    <td>
+                        <button class="action-btn" onclick="openUpdate(${g.id})">Update</button>
+                        ${g.status !== 'RESOLVED' ? `<button class="action-btn" style="color:#10b981;background:#ecfdf5" onclick="openResolve(${g.id})">Resolve</button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openUpdate(id) {
+            currentId = id;
+            isResolving = false;
+            document.getElementById('modalTitle').textContent = 'Update Progress - #' + id;
+            document.getElementById('resolveOnly').style.display = 'none';
+            document.getElementById('updateModal').classList.add('show');
+        }
+
+        function openResolve(id) {
+            currentId = id;
+            isResolving = true;
+            document.getElementById('modalTitle').textContent = 'Resolve Grievance - #' + id;
+            document.getElementById('resolveOnly').style.display = 'block';
+            document.getElementById('updateModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('updateModal').classList.remove('show');
+            document.getElementById('remarks').value = '';
+            document.getElementById('resImage').value = '';
+            document.getElementById('preview').style.display = 'none';
+            base64Image = '';
+        }
+
+        function previewFile() {
+            const file = document.getElementById('resImage').files[0];
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                base64Image = reader.result;
+                const preview = document.getElementById('preview');
+                preview.src = reader.result;
+                preview.style.display = 'block';
+            }
+            if (file) reader.readAsDataURL(file);
+        }
+
+        async function submitUpdate() {
+            const remarks = document.getElementById('remarks').value;
+            if (!remarks) return showToast('Please add remarks');
+            
+            const url = isResolving ? `/api/module4/grievances/${currentId}/resolve` : `/api/module4/grievances/${currentId}/progress`;
+            const payload = isResolving ? { remarks, imageBase64: base64Image } : { remarks, status: 'IN_PROGRESS' };
+            
+            try {
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    showToast(isResolving ? 'Grievance resolved!' : 'Progress updated!');
+                    closeModal();
+                    loadGrievances();
+                } else {
+                    const err = await res.json();
+                    showToast(err.error || 'Update failed');
+                }
+            } catch (err) {
+                showToast('Server error');
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        function logout() { localStorage.clear(); window.location.href = '/index.html'; }
+
+        loadGrievances();
+    </script>
+</body>
+</html>

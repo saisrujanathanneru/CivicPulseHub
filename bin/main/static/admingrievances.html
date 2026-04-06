@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CivicPulse – Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #0d1117; --ink-soft: #6b7280; --surface: #f0f2f7; --panel: #ffffff;
+      --admin: #7c3aed; --admin-soft: #ede9fe; --admin-hover: #6d28d9;
+      --border: #e4e7ef; --sidebar-w: 268px;
+      --pending: #f59e0b; --progress: #3b82f6; --resolved: #10b981; --closed: #9ca3af;
+      --low: #10b981; --medium: #f59e0b; --high: #ef4444; --critical: #7c3aed;
+    }
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); }
+
+    /* LAYOUT */
+    .app { display: flex; min-height: 100vh; }
+
+    /* SIDEBAR */
+    .sidebar { background: var(--ink); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh; overflow-y: auto; z-index: 100; }
+    .sidebar-logo { padding: 24px 20px; display: flex; align-items: center; gap: 11px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .logo-mark { width: 36px; height: 36px; background: var(--admin); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+    .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: white; }
+    .logo-badge { font-size: 0.6rem; background: var(--admin); color: white; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.05em; margin-left: 4px; vertical-align: middle; }
+    .admin-profile { margin: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.25); }
+    .admin-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: #a78bfa; font-weight: 700; }
+    .admin-name { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; color: white; margin-top: 2px; }
+    .nav-group { padding: 16px 12px 4px; }
+    .nav-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.25); padding: 0 8px; margin-bottom: 6px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; color: rgba(255,255,255,0.5); font-size: 0.87rem; font-weight: 500; transition: all 0.15s; margin-bottom: 2px; text-decoration: none; }
+    .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
+    .nav-item.active { background: var(--admin); color: white; }
+    .nav-item svg { width: 17px; height: 17px; flex-shrink: 0; }
+    .nav-badge { margin-left: auto; background: rgba(255,255,255,0.15); color: white; font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+    .nav-item.active .nav-badge { background: rgba(255,255,255,0.25); }
+    .sidebar-footer { margin-top: auto; padding: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
+    .logout-btn { width: 100%; padding: 10px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: #f87171; font-family: 'DM Sans', sans-serif; font-size: 0.84rem; cursor: pointer; transition: background 0.15s; }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* MAIN */
+    .main { margin-left: var(--sidebar-w); flex: 1; min-width: 0; overflow-x: hidden; }
+
+    /* TOPBAR */
+    .topbar { background: var(--panel); border-bottom: 1px solid var(--border); padding: 15px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    .topbar-left h1 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem; }
+    .topbar-left p { font-size: 0.8rem; color: var(--ink-soft); margin-top: 1px; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--admin); color: white; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.88rem; }
+
+    /* CONTENT */
+    .content { padding: 28px; }
+
+    /* STATS GRID */
+    .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--c, var(--admin)); }
+    .stat-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.7rem; color: var(--c, var(--admin)); line-height: 1; }
+    .stat-label { font-size: 0.72rem; color: var(--ink-soft); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* TOOLBAR */
+    .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+    .search-box { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1.5px solid var(--border); border-radius: 10px; padding: 9px 14px; flex: 1; min-width: 200px; max-width: 320px; }
+    .search-box input { border: none; outline: none; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--ink); background: transparent; width: 100%; }
+    .search-box input::placeholder { color: #b0b7c3; }
+    .filter-select { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--ink); background: var(--panel); outline: none; cursor: pointer; }
+    .filter-select:focus { border-color: var(--admin); }
+    .refresh-btn { padding: 9px 16px; background: var(--admin-soft); border: none; border-radius: 10px; color: var(--admin); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 6px; }
+    .refresh-btn:hover { background: #ddd6fe; }
+    .count-label { margin-left: auto; font-size: 0.82rem; color: var(--ink-soft); font-weight: 500; }
+
+    /* TABLE */
+    .table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f8f9fc; }
+    th { padding: 12px 16px; text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-soft); font-weight: 700; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 14px 16px; border-bottom: 1px solid #f1f3f8; font-size: 0.86rem; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbff; }
+
+    /* TABLE CELLS */
+    .id-cell { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; color: var(--ink-soft); }
+    .title-cell { font-weight: 600; color: var(--ink); max-width: 200px; }
+    .title-cell .title-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 190px; }
+    .title-cell .citizen { font-size: 0.75rem; color: var(--ink-soft); margin-top: 2px; }
+    .cat-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; font-size: 0.73rem; font-weight: 600; background: #f1f3f8; color: #374151; }
+
+    /* STATUS + PRIORITY BADGES */
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+    .s-PENDING     { background: #fef3c7; color: #92400e; }
+    .s-IN_PROGRESS { background: #dbeafe; color: #1e40af; }
+    .s-RESOLVED    { background: #d1fae5; color: #065f46; }
+    .s-CLOSED      { background: #f3f4f6; color: #374151; }
+    .p-LOW      { background: #d1fae5; color: #065f46; }
+    .p-MEDIUM   { background: #fef3c7; color: #92400e; }
+    .p-HIGH     { background: #fee2e2; color: #991b1b; }
+    .p-CRITICAL { background: #ede9fe; color: #5b21b6; }
+
+    /* OFFICER CELL */
+    .officer-cell { font-size: 0.83rem; color: var(--ink); }
+    .officer-cell.unassigned { color: #b0b7c3; font-style: italic; }
+
+    /* DEADLINE CELL */
+    .deadline-cell { font-size: 0.8rem; white-space: nowrap; }
+    .deadline-cell.overdue { color: #ef4444; font-weight: 600; }
+    .deadline-cell.soon { color: #f59e0b; font-weight: 600; }
+    .deadline-cell.ok { color: var(--ink-soft); }
+    .deadline-cell.none { color: #c4c9d4; font-style: italic; }
+
+    /* ACTION BTN */
+    .action-btn { padding: 6px 12px; background: var(--admin-soft); border: none; border-radius: 8px; color: var(--admin); font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+    .action-btn:hover { background: #ddd6fe; }
+
+    /* EMPTY / LOADING */
+    .table-msg { text-align: center; padding: 50px; color: var(--ink-soft); font-size: 0.9rem; }
+
+    /* ── MODAL ── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
+    .overlay.show { display: flex; }
+    .modal { background: var(--panel); border-radius: 20px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.2s ease; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .modal-head { padding: 24px 28px 0; display: flex; justify-content: space-between; align-items: flex-start; }
+    .modal-head-left h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; }
+    .modal-head-left p { font-size: 0.8rem; color: var(--ink-soft); margin-top: 3px; }
+    .modal-close { width: 32px; height: 32px; border: none; background: var(--surface); border-radius: 8px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .modal-body { padding: 20px 28px 28px; }
+    .modal-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; padding: 16px; background: var(--surface); border-radius: 12px; }
+    .info-item .info-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-soft); font-weight: 700; margin-bottom: 3px; }
+    .info-item .info-val { font-size: 0.88rem; color: var(--ink); font-weight: 500; }
+    .divider { height: 1px; background: var(--border); margin: 18px 0; }
+    .form-section-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; margin-bottom: 14px; color: var(--ink); }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+    .field select, .field input, .field textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--ink); background: white; outline: none; transition: border-color 0.15s; }
+    .field select:focus, .field input:focus, .field textarea:focus { border-color: var(--admin); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+    .field textarea { resize: vertical; min-height: 80px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-desc { background: var(--surface); border-radius: 10px; padding: 12px 14px; font-size: 0.85rem; line-height: 1.6; color: var(--ink); margin-bottom: 16px; max-height: 100px; overflow-y: auto; }
+    .modal-img { width: 100%; border-radius: 10px; max-height: 160px; object-fit: cover; margin-bottom: 16px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 6px; }
+    .btn-save { flex: 1; padding: 12px; background: var(--admin); color: white; border: none; border-radius: 11px; font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.15s, box-shadow 0.15s; }
+    .btn-save:hover { background: var(--admin-hover); box-shadow: 0 4px 14px rgba(124,58,237,0.35); }
+    .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-cancel { padding: 12px 20px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 11px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; color: var(--ink-soft); }
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: white; padding: 12px 20px; border-radius: 12px; font-size: 0.88rem; font-weight: 500; z-index: 999; display: none; animation: fadeIn 0.2s ease; }
+    .toast.show { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 768px) {
+      .app { display: block; }
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .content { padding: 16px; }
+      .field-row { grid-template-columns: 1fr; }
+      .modal-info-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">🛡️</div>
+      <div>
+        <span class="logo-text">CivicPulse</span>
+        <span class="logo-badge">ADMIN</span>
+      </div>
+    </div>
+    <div class="admin-profile">
+      <div class="admin-label">Logged in as</div>
+      <div class="admin-name" id="adminName">Admin</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Management</div>
+      <a class="nav-item" href="dashboard.html">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        Overview
+      </a>
+      <a class="nav-item active" href="admingrievances.html">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.05 15.96 0 13.5 0c-1.3 0-2.42.56-3.24 1.44L9 3.5 7.74 1.44C6.92.56 5.8 0 4.5 0 2.04 0 0 2.05 0 4.64c0 .48.1.92.18 1.36H0v2h20V6zM9 12H5v-2h4v2zm6 0h-4v-2h4v2zm-6 4H5v-2h4v2zm6 0h-4v-2h4v2zm-6 4H5v-2h4v2zm6 0h-4v-2h4v2z"/></svg>
+        All Grievances
+        <span class="nav-badge" id="pendingBadge">0</span>
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()">⬡ Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Grievance Management</h1>
+        <p>Assign officers, set priorities and track resolution</p>
+      </div>
+      <div class="topbar-right">
+        <div class="avatar" id="adminAvatar">A</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- STATS -->
+      <div class="stats-grid">
+        <div class="stat-card" style="--c:#6b7280"><div class="stat-num" id="sTotal">0</div><div class="stat-label">Total</div></div>
+        <div class="stat-card" style="--c:#f59e0b"><div class="stat-num" id="sPending">0</div><div class="stat-label">Pending</div></div>
+        <div class="stat-card" style="--c:#3b82f6"><div class="stat-num" id="sProgress">0</div><div class="stat-label">In Progress</div></div>
+        <div class="stat-card" style="--c:#10b981"><div class="stat-num" id="sResolved">0</div><div class="stat-label">Resolved</div></div>
+        <div class="stat-card" style="--c:#ef4444"><div class="stat-num" id="sHigh">0</div><div class="stat-label">High Priority</div></div>
+        <div class="stat-card" style="--c:#7c3aed"><div class="stat-num" id="sCritical">0</div><div class="stat-label">Critical</div></div>
+      </div>
+
+      <!-- TOOLBAR -->
+      <div class="toolbar">
+        <div class="search-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="searchInput" placeholder="Search by title, citizen, category…" oninput="applyFilters()"/>
+        </div>
+        <select class="filter-select" id="statusFilter" onchange="applyFilters()">
+          <option value="">All Statuses</option>
+          <option value="PENDING">Pending</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="CLOSED">Closed</option>
+        </select>
+        <select class="filter-select" id="priorityFilter" onchange="applyFilters()">
+          <option value="">All Priorities</option>
+          <option value="CRITICAL">Critical</option>
+          <option value="HIGH">High</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="LOW">Low</option>
+        </select>
+        <select class="filter-select" id="catFilter" onchange="applyFilters()">
+          <option value="">All Categories</option>
+          <option value="WATER">💧 Water</option>
+          <option value="STREET_LIGHT">💡 Street Light</option>
+          <option value="ROAD">🛣️ Road</option>
+          <option value="SANITATION">🗑️ Sanitation</option>
+          <option value="DRAINAGE">🌊 Drainage</option>
+          <option value="PARK">🌳 Park</option>
+          <option value="ELECTRICITY">⚡ Electricity</option>
+          <option value="OTHER">📌 Other</option>
+        </select>
+        <button class="refresh-btn" onclick="loadData()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+          Refresh
+        </button>
+        <span class="count-label" id="countLabel">Loading…</span>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#ID</th>
+              <th>Grievance</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Assigned Officer</th>
+              <th>Deadline</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="grievanceTable">
+            <tr><td colspan="8" class="table-msg">Loading grievances…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE MODAL -->
+<div class="overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="modal" id="modal">
+    <div class="modal-head">
+      <div class="modal-head-left">
+        <h2 id="modalTitle">Manage Grievance</h2>
+        <p id="modalSub">Update assignment, status and priority</p>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- READ-ONLY INFO -->
+      <div class="modal-info-grid" id="modalInfo"></div>
+
+      <!-- DESCRIPTION -->
+      <div id="modalDescWrap" style="display:none">
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-soft);font-weight:700;margin-bottom:6px;">Description</div>
+        <div class="modal-desc" id="modalDesc"></div>
+      </div>
+
+      <!-- IMAGE -->
+      <img id="modalImg" class="modal-img" style="display:none"/>
+
+      <div class="divider"></div>
+      <div class="form-section-title">⚙️ Update Grievance</div>
+
+      <!-- FORM -->
+      <div class="field-row">
+        <div class="field">
+          <label>Status</label>
+          <select id="fStatus">
+            <option value="PENDING">⏳ Pending</option>
+            <option value="IN_PROGRESS">⚙️ In Progress</option>
+            <option value="RESOLVED">✅ Resolved</option>
+            <option value="CLOSED">🔒 Closed</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Priority</label>
+          <select id="fPriority">
+            <option value="LOW">🟢 Low</option>
+            <option value="MEDIUM">🟡 Medium</option>
+            <option value="HIGH">🔴 High</option>
+            <option value="CRITICAL">🟣 Critical</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Assign Officer (username)</label>
+        <input type="text" id="fOfficer" placeholder="Enter officer username e.g. officer_john"/>
+      </div>
+
+      <div class="field">
+        <label>Deadline</label>
+        <input type="datetime-local" id="fDeadline"/>
+      </div>
+
+      <div class="field">
+        <label>Remarks / Notes</label>
+        <textarea id="fRemarks" placeholder="Add remarks, update notes, or resolution details…"></textarea>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" id="saveBtn" onclick="saveUpdate()">Save Changes →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Auth check ──────────────────────────────────────────────────────────────
+  const token   = localStorage.getItem('civicpulse_token');
+  const userStr = localStorage.getItem('civicpulse_user');
+  if (!token || !userStr) { window.location.href = '/index.html'; }
+  const user = JSON.parse(userStr || '{}');
+  if (user.role !== 'ADMIN') { window.location.href = '/dashboard.html'; }
+
+  document.getElementById('adminName').textContent   = user.username;
+  document.getElementById('adminAvatar').textContent = user.username[0].toUpperCase();
+
+  const CAT_ICONS = { WATER:'💧', STREET_LIGHT:'💡', ROAD:'🛣️', SANITATION:'🗑️', DRAINAGE:'🌊', PARK:'🌳', ELECTRICITY:'⚡', OTHER:'📌' };
+
+  let allGrievances = [];
+  let currentId = null;
+
+  // ── Load stats + grievances ─────────────────────────────────────────────────
+  async function loadData() {
+    try {
+      const [statsRes, listRes] = await Promise.all([
+        fetch('/api/grievances/stats', { headers: { Authorization: 'Bearer ' + token } }),
+        fetch('/api/grievances/all',   { headers: { Authorization: 'Bearer ' + token } })
+      ]);
+      const stats = await statsRes.json();
+      const list  = await listRes.json();
+
+      document.getElementById('sTotal').textContent    = stats.total    || 0;
+      document.getElementById('sPending').textContent  = stats.pending  || 0;
+      document.getElementById('sProgress').textContent = stats.inProgress || 0;
+      document.getElementById('sResolved').textContent = stats.resolved  || 0;
+      document.getElementById('sHigh').textContent     = stats.high      || 0;
+      document.getElementById('sCritical').textContent = stats.critical  || 0;
+      document.getElementById('pendingBadge').textContent = stats.pending || 0;
+
+      allGrievances = list;
+      applyFilters();
+    } catch (err) {
+      document.getElementById('grievanceTable').innerHTML =
+        '<tr><td colspan="8" class="table-msg">⚠️ Could not load data. Is the server running?</td></tr>';
+    }
+  }
+
+  // ── Filter + render table ───────────────────────────────────────────────────
+  function applyFilters() {
+    const search   = document.getElementById('searchInput').value.toLowerCase();
+    const status   = document.getElementById('statusFilter').value;
+    const priority = document.getElementById('priorityFilter').value;
+    const cat      = document.getElementById('catFilter').value;
+
+    const filtered = allGrievances.filter(g => {
+      const matchSearch = !search ||
+        g.title.toLowerCase().includes(search) ||
+        g.citizenUsername.toLowerCase().includes(search) ||
+        g.category.toLowerCase().includes(search) ||
+        (g.assignedOfficer || '').toLowerCase().includes(search);
+      const matchStatus   = !status   || g.status === status;
+      const matchPriority = !priority || g.priority === priority;
+      const matchCat      = !cat      || g.category === cat;
+      return matchSearch && matchStatus && matchPriority && matchCat;
+    });
+
+    document.getElementById('countLabel').textContent =
+      `Showing ${filtered.length} of ${allGrievances.length} grievances`;
+    renderTable(filtered);
+  }
+
+  function renderTable(list) {
+    const tbody = document.getElementById('grievanceTable');
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="table-msg">No grievances match your filters.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(g => {
+      const icon      = CAT_ICONS[g.category] || '📌';
+      const date      = new Date(g.submittedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+      const dlClass   = deadlineClass(g.deadline);
+      const dlText    = g.deadline
+        ? new Date(g.deadline).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'2-digit' })
+        : '—';
+      const officerHtml = g.assignedOfficer
+        ? `<span class="officer-cell">${g.assignedOfficer}</span>`
+        : `<span class="officer-cell unassigned">Unassigned</span>`;
+
+      return `
+        <tr>
+          <td><span class="id-cell">#${g.id}</span><br><span style="font-size:0.72rem;color:#b0b7c3">${date}</span></td>
+          <td class="title-cell">
+            <span class="title-text" title="${g.title}">${g.title}</span>
+            <span class="citizen">👤 ${g.citizenUsername}</span>
+          </td>
+          <td><span class="cat-chip">${icon} ${g.category.replace('_',' ')}</span></td>
+          <td><span class="badge s-${g.status}">${g.status.replace('_',' ')}</span></td>
+          <td><span class="badge p-${g.priority || 'MEDIUM'}">${g.priority || 'MEDIUM'}</span></td>
+          <td>${officerHtml}</td>
+          <td><span class="deadline-cell ${dlClass}">${dlText}</span></td>
+          <td><button class="action-btn" onclick="openModal(${g.id})">Manage →</button></td>
+        </tr>`;
+    }).join('');
+  }
+
+  function deadlineClass(dl) {
+    if (!dl) return 'none';
+    const diff = new Date(dl) - new Date();
+    if (diff < 0)              return 'overdue';
+    if (diff < 86400000 * 2)   return 'soon';
+    return 'ok';
+  }
+
+  // ── Open modal ──────────────────────────────────────────────────────────────
+  function openModal(id) {
+    const g = allGrievances.find(x => x.id === id);
+    if (!g) return;
+    currentId = id;
+
+    document.getElementById('modalTitle').textContent = `#${g.id} — ${g.title}`;
+    document.getElementById('modalSub').textContent   = `${g.category.replace('_',' ')} · Submitted by ${g.citizenUsername}`;
+
+    // Info grid
+    const submittedDate = new Date(g.submittedAt).toLocaleString('en-IN');
+    document.getElementById('modalInfo').innerHTML = `
+      <div class="info-item"><div class="info-label">Status</div><div class="info-val"><span class="badge s-${g.status}">${g.status.replace('_',' ')}</span></div></div>
+      <div class="info-item"><div class="info-label">Priority</div><div class="info-val"><span class="badge p-${g.priority||'MEDIUM'}">${g.priority||'MEDIUM'}</span></div></div>
+      <div class="info-item"><div class="info-label">Citizen</div><div class="info-val">👤 ${g.citizenUsername}</div></div>
+      <div class="info-item"><div class="info-label">Submitted</div><div class="info-val">${submittedDate}</div></div>
+      ${g.location ? `<div class="info-item" style="grid-column:span 2"><div class="info-label">Location</div><div class="info-val">📍 ${g.location}</div></div>` : ''}
+    `;
+
+    // Description
+    if (g.description) {
+      document.getElementById('modalDescWrap').style.display = 'block';
+      document.getElementById('modalDesc').textContent = g.description;
+    }
+
+    // Image
+    const img = document.getElementById('modalImg');
+    if (g.imageBase64) { img.src = g.imageBase64; img.style.display = 'block'; }
+    else { img.style.display = 'none'; }
+
+    // Pre-fill form
+    document.getElementById('fStatus').value   = g.status || 'PENDING';
+    document.getElementById('fPriority').value = g.priority || 'MEDIUM';
+    document.getElementById('fOfficer').value  = g.assignedOfficer || '';
+    document.getElementById('fRemarks').value  = g.remarks || '';
+    document.getElementById('fDeadline').value = g.deadline
+      ? g.deadline.substring(0, 16) : '';
+
+    document.getElementById('overlay').classList.add('show');
+  }
+
+  function closeModal() { document.getElementById('overlay').classList.remove('show'); currentId = null; }
+  function closeOverlay(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+  // ── Save update ─────────────────────────────────────────────────────────────
+  async function saveUpdate() {
+    if (!currentId) return;
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    const deadline = document.getElementById('fDeadline').value;
+    const payload = {
+      status:          document.getElementById('fStatus').value,
+      priority:        document.getElementById('fPriority').value,
+      assignedOfficer: document.getElementById('fOfficer').value.trim(),
+      remarks:         document.getElementById('fRemarks').value.trim(),
+      deadline:        deadline ? deadline + ':00' : ''
+    };
+
+    try {
+      const res = await fetch(`/api/grievances/${currentId}/admin-update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast('❌ ' + (data.error || 'Update failed')); return; }
+
+      // Update local data
+      const idx = allGrievances.findIndex(g => g.id === currentId);
+      if (idx !== -1) allGrievances[idx] = data;
+
+      closeModal();
+      applyFilters();
+      loadStats();
+      showToast(`✅ Grievance #${currentId} updated successfully!`);
+    } catch (err) {
+      showToast('❌ Server error. Try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save Changes →';
+    }
+  }
+
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/grievances/stats', { headers: { Authorization: 'Bearer ' + token } });
+      const stats = await res.json();
+      document.getElementById('sTotal').textContent    = stats.total    || 0;
+      document.getElementById('sPending').textContent  = stats.pending  || 0;
+      document.getElementById('sProgress').textContent = stats.inProgress || 0;
+      document.getElementById('sResolved').textContent = stats.resolved  || 0;
+      document.getElementById('sHigh').textContent     = stats.high      || 0;
+      document.getElementById('sCritical').textContent = stats.critical  || 0;
+      document.getElementById('pendingBadge').textContent = stats.pending || 0;
+    } catch (_) {}
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function logout() { localStorage.clear(); window.location.href = '/index.html'; }
+
+  // Load on start
+  loadData();
+</script>
+</body>
+</html>

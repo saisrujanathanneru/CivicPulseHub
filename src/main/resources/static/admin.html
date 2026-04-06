@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CivicPulse – Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { overflow-x: hidden; }
+    :root {
+      --ink: #0d1117; --ink-soft: #6b7280; --surface: #f3f5f9; --panel: #ffffff;
+      --accent: #1a56db; --accent-light: #e8effd;
+      --admin: #8b5cf6; --admin-bg: #f5f3ff; --admin-accent: #4c1d95;
+      --border: #e5e8f0; --sidebar-w: 260px;
+      --pending:    #f59e0b; --pending-bg:    #fffbeb;
+      --inprogress: #3b82f6; --inprogress-bg: #eff6ff;
+      --resolved:   #10b981; --resolved-bg:   #ecfdf5;
+      --closed:     #6b7280; --closed-bg:     #f9fafb;
+      --low:      #10b981; --medium: #f59e0b; --high: #ef4444; --critical: #7c3aed;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--ink); display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh;
+      overflow-y: auto; z-index: 100; transition: transform 0.3s;
+    }
+    .sidebar-top { padding: 28px 20px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .logo-icon { width: 34px; height: 34px; background: var(--admin); border-radius: 9px; display: grid; place-items: center; }
+    .logo-icon svg { width: 18px; height: 18px; fill: white; }
+    .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: white; }
+    .logo-sub  { font-size: .72rem; color: rgba(255,255,255,.4); letter-spacing: .04em; }
+    .sidebar-role { margin-top: 14px; display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(139,92,246,.18); border-radius: 20px; padding: 5px 12px; }
+    .role-dot { width: 8px; height: 8px; background: var(--admin); border-radius: 50%; }
+    .role-label { font-size: .75rem; color: var(--admin); font-weight: 600; letter-spacing:.04em; text-transform: uppercase; }
+
+    .sidebar-nav { flex: 1; padding: 16px 12px; }
+    .nav-section-label { font-size: .65rem; color: rgba(255,255,255,.3); letter-spacing:.1em;
+      text-transform: uppercase; padding: 8px 10px 4px; }
+    .nav-item { display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+      border-radius: 10px; cursor: pointer; transition: background .15s; color: rgba(255,255,255,.65);
+      font-size: .88rem; text-decoration: none; margin-bottom: 2px; }
+    .nav-item:hover { background: rgba(255,255,255,.07); color: white; }
+    .nav-item.active { background: rgba(139,92,246,.22); color: white; }
+    .nav-item svg { width: 17px; height: 17px; flex-shrink: 0; opacity: .8; }
+    .nav-badge { margin-left: auto; background: var(--admin); color: white; font-size: .65rem;
+      font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+
+    .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,.08); }
+    .user-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; }
+    .user-avatar { width: 34px; height: 34px; background: var(--admin); border-radius: 9px;
+      display: grid; place-items: center; color: white; font-weight: 700; font-size: .85rem; }
+    .user-name  { font-size: .85rem; color: white; font-weight: 600; }
+    .user-email { font-size: .72rem; color: rgba(255,255,255,.4); }
+    .logout-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px;
+      margin-top: 6px; border-radius: 10px; border: none; background: rgba(239,68,68,.12);
+      color: #f87171; font-size: .82rem; cursor: pointer; transition: background .15s; font-family: inherit; }
+    .logout-btn:hover { background: rgba(239,68,68,.22); }
+
+    /* ── Main ── */
+    .main { margin-left: var(--sidebar-w); padding: 0; min-height: 100vh; }
+
+    .topbar { background: var(--panel); border-bottom: 1px solid var(--border);
+      padding: 16px 32px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50; }
+    .topbar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.15rem; color: var(--ink); }
+    .topbar-sub   { font-size: .78rem; color: var(--ink-soft); margin-top: 1px; }
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+    .btn { padding: 8px 16px; border-radius: 9px; font-size: .82rem; font-weight: 600;
+      cursor: pointer; border: none; font-family: inherit; transition: all .15s; }
+    .btn-primary { background: var(--admin); color: white; }
+    .btn-primary:hover { background: #7c3aed; }
+    .btn-outline { background: transparent; color: var(--ink-soft); border: 1px solid var(--border); }
+    .btn-outline:hover { background: var(--surface); }
+
+    .content { padding: 28px 32px; }
+
+    /* ── Stats cards ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px 22px; cursor: pointer; transition: box-shadow .15s, transform .12s; }
+    .stat-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.07); transform: translateY(-1px); }
+    .stat-card.active { border-color: var(--admin); box-shadow: 0 0 0 2px rgba(139,92,246,.2); }
+    .stat-label { font-size: .75rem; color: var(--ink-soft); font-weight: 500; letter-spacing:.03em; text-transform: uppercase; }
+    .stat-number { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; margin: 4px 0 6px; }
+    .stat-trend  { font-size: .75rem; color: var(--ink-soft); }
+    .stat-icon   { float: right; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; }
+    .stat-icon svg { width: 18px; height: 18px; }
+
+    /* ── Toolbar ── */
+    .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+    .search-box { display: flex; align-items: center; gap: 8px; background: var(--panel);
+      border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; flex: 1; min-width: 200px; }
+    .search-box svg { width: 16px; height: 16px; color: var(--ink-soft); flex-shrink: 0; }
+    .search-box input { border: none; outline: none; font-family: inherit; font-size: .85rem;
+      color: var(--ink); background: transparent; width: 100%; }
+    .search-box input::placeholder { color: var(--ink-soft); }
+    .filter-select { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 14px; font-family: inherit; font-size: .85rem; color: var(--ink); cursor: pointer; outline: none; }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; }
+    .table-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: .95rem; }
+    .table-count { font-size: .78rem; color: var(--ink-soft); }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 11px 16px; text-align: left; font-size: .72rem; font-weight: 600;
+      color: var(--ink-soft); letter-spacing: .05em; text-transform: uppercase;
+      background: #fafbfc; border-bottom: 1px solid var(--border); }
+    tbody tr { border-bottom: 1px solid #f1f3f8; transition: background .1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafbff; }
+    td { padding: 13px 16px; font-size: .84rem; vertical-align: middle; }
+    .td-id { font-family: monospace; font-size: .75rem; color: var(--ink-soft); }
+    .td-title { font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .td-citizen { color: var(--ink-soft); font-size: .8rem; }
+    .td-actions { display: flex; gap: 6px; }
+
+    /* ── Chips ── */
+    .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+      border-radius: 20px; font-size: .72rem; font-weight: 600; letter-spacing: .02em; }
+    .chip-PENDING    { background: var(--pending-bg);    color: #92400e; }
+    .chip-IN_PROGRESS{ background: var(--inprogress-bg); color: #1e40af; }
+    .chip-RESOLVED   { background: var(--resolved-bg);   color: #065f46; }
+    .chip-CLOSED     { background: var(--closed-bg);     color: #374151; }
+    .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .priority-chip { display: inline-block; padding: 2px 9px; border-radius: 6px; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .priority-LOW      { background: #d1fae5; color: #065f46; }
+    .priority-MEDIUM   { background: #fef3c7; color: #92400e; }
+    .priority-HIGH     { background: #fee2e2; color: #991b1b; }
+    .priority-CRITICAL { background: #ede9fe; color: #4c1d95; }
+    .priority-NONE     { background: #f3f4f6; color: #6b7280; }
+
+    .category-chip { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: .7rem; font-weight: 600; background: var(--accent-light); color: var(--accent); }
+
+    .action-btn { padding: 5px 11px; border-radius: 7px; font-size: .76rem; font-weight: 600;
+      cursor: pointer; border: none; font-family: inherit; transition: all .15s; }
+    .action-assign { background: var(--admin-bg); color: var(--admin); }
+    .action-assign:hover { background: #ede9fe; }
+    .action-view   { background: var(--accent-light); color: var(--accent); }
+    .action-view:hover { background: #dbeafe; }
+
+    /* ── Modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--panel); border-radius: 18px; width: 100%; max-width: 560px;
+      max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      animation: slideUp .2s ease; }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header { padding: 22px 24px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; }
+    .modal-sub   { font-size: .78rem; color: var(--ink-soft); margin-top: 2px; }
+    .modal-close { width: 32px; height: 32px; border: none; background: var(--surface);
+      border-radius: 8px; cursor: pointer; display: grid; place-items: center; font-size: 1.1rem; color: var(--ink-soft); }
+    .modal-close:hover { background: var(--border); }
+    .modal-body   { padding: 22px 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+    .form-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-full { margin-bottom: 14px; }
+    label { display: block; font-size: .78rem; font-weight: 600; color: var(--ink-soft);
+      margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+    input, select, textarea {
+      width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px;
+      font-family: inherit; font-size: .85rem; color: var(--ink); background: var(--surface);
+      outline: none; transition: border .15s; }
+    input:focus, select:focus, textarea:focus { border-color: var(--admin); background: white; box-shadow: 0 0 0 3px rgba(139,92,246,.1); }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* ── Detail Modal ── */
+    .detail-row { display: flex; margin-bottom: 12px; }
+    .detail-key { width: 130px; font-size: .78rem; color: var(--ink-soft); font-weight: 500; flex-shrink: 0; padding-top: 1px; }
+    .detail-val { font-size: .85rem; color: var(--ink); flex: 1; }
+    .detail-desc { margin-top: 12px; padding: 12px 14px; background: var(--surface); border-radius: 10px; font-size: .84rem; line-height: 1.6; color: var(--ink); }
+    .detail-divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1c1c1c; color: white;
+      padding: 12px 18px; border-radius: 12px; font-size: .85rem; font-weight: 500;
+      z-index: 999; animation: toastIn .25s ease; max-width: 320px; display: flex; align-items: center; gap: 10px; }
+    @keyframes toastIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+    .toast-success { border-left: 4px solid #10b981; }
+    .toast-error   { border-left: 4px solid #ef4444; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 56px 20px; color: var(--ink-soft); }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; color: var(--ink); margin-bottom: 4px; }
+    .empty-text  { font-size: .84rem; }
+
+    /* ── Loading ── */
+    .loading { text-align: center; padding: 48px; color: var(--ink-soft); font-size: .88rem; }
+    .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border);
+      border-top-color: var(--admin); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .main { margin-left: 0; }
+      .content, .topbar { padding-left: 20px; padding-right: 20px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-top">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      </div>
+      <div>
+        <div class="logo-text">CivicPulse</div>
+        <div class="logo-sub">Smart City Portal</div>
+      </div>
+    </div>
+    <div class="sidebar-role">
+      <div class="role-dot"></div>
+      <span class="role-label">Admin Panel</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Management</div>
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item active" onclick="filterAll()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      All Grievances
+      <span class="nav-badge" id="nav-total">0</span>
+    </a>
+    <a class="nav-item" onclick="filterByStatus('PENDING')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      Pending
+    </a>
+    <a class="nav-item" onclick="filterByStatus('IN_PROGRESS')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      In Progress
+    </a>
+    <a class="nav-item" onclick="filterByStatus('RESOLVED')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+      Resolved
+    </a>
+
+    <div class="nav-section-label" style="margin-top:12px">Navigation</div>
+    <a href="submit.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      Submit Grievance
+    </a>
+    <a href="index.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      Home
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar" id="sidebar-avatar">A</div>
+      <div>
+        <div class="user-name" id="sidebar-name">Admin</div>
+        <div class="user-email" id="sidebar-role-text">Administrator</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+      Sign out
+    </button>
+  </div>
+</aside>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Grievance Management</div>
+      <div class="topbar-sub">View, assign, and prioritise all citizen complaints</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-outline" onclick="loadGrievances()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card" onclick="filterAll()">
+        <div class="stat-icon" style="background:#f5f3ff"><svg viewBox="0 0 24 24" fill="#8b5cf6"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>
+        <div class="stat-label">Total</div>
+        <div class="stat-number" id="stat-total" style="color:#8b5cf6">—</div>
+        <div class="stat-trend">All grievances</div>
+      </div>
+      <div class="stat-card" onclick="filterByStatus('PENDING')">
+        <div class="stat-icon" style="background:#fffbeb"><svg viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+        <div class="stat-label">Pending</div>
+        <div class="stat-number" id="stat-pending" style="color:#f59e0b">—</div>
+        <div class="stat-trend">Awaiting assignment</div>
+      </div>
+      <div class="stat-card" onclick="filterByStatus('IN_PROGRESS')">
+        <div class="stat-icon" style="background:#eff6ff"><svg viewBox="0 0 24 24" fill="#3b82f6"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div>
+        <div class="stat-label">In Progress</div>
+        <div class="stat-number" id="stat-inprogress" style="color:#3b82f6">—</div>
+        <div class="stat-trend">Being handled</div>
+      </div>
+      <div class="stat-card" onclick="filterByStatus('RESOLVED')">
+        <div class="stat-icon" style="background:#ecfdf5"><svg viewBox="0 0 24 24" fill="#10b981"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>
+        <div class="stat-label">Resolved</div>
+        <div class="stat-number" id="stat-resolved" style="color:#10b981">—</div>
+        <div class="stat-trend">Closed successfully</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="search-input" placeholder="Search by title, citizen, category…" oninput="applyFilters()"/>
+      </div>
+      <select class="filter-select" id="filter-status" onchange="applyFilters()">
+        <option value="">All Statuses</option>
+        <option value="PENDING">Pending</option>
+        <option value="IN_PROGRESS">In Progress</option>
+        <option value="RESOLVED">Resolved</option>
+        <option value="CLOSED">Closed</option>
+      </select>
+      <select class="filter-select" id="filter-priority" onchange="applyFilters()">
+        <option value="">All Priorities</option>
+        <option value="CRITICAL">Critical</option>
+        <option value="HIGH">High</option>
+        <option value="MEDIUM">Medium</option>
+        <option value="LOW">Low</option>
+      </select>
+      <select class="filter-select" id="filter-category" onchange="applyFilters()">
+        <option value="">All Categories</option>
+        <option value="WATER">Water</option>
+        <option value="STREET_LIGHT">Street Light</option>
+        <option value="ROAD">Road</option>
+        <option value="SANITATION">Sanitation</option>
+        <option value="DRAINAGE">Drainage</option>
+        <option value="PARK">Park</option>
+        <option value="ELECTRICITY">Electricity</option>
+        <option value="OTHER">Other</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <div>
+          <div class="table-title">Grievances</div>
+          <div class="table-count" id="table-count">Loading…</div>
+        </div>
+      </div>
+      <div id="table-content">
+        <div class="loading"><span class="spinner"></span>Loading grievances…</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ═══════════════════ ASSIGN MODAL ═══════════════════ -->
+<div class="modal-overlay" id="assign-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Assign & Prioritise</div>
+        <div class="modal-sub" id="assign-modal-sub">Grievance #—</div>
+      </div>
+      <button class="modal-close" onclick="closeAssignModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div>
+          <label>Assign To Officer</label>
+          <input type="text" id="assign-officer" placeholder="e.g. officer.john"/>
+        </div>
+        <div>
+          <label>Department</label>
+          <select id="assign-dept">
+            <option value="">Select Department</option>
+            <option value="Water Supply">Water Supply</option>
+            <option value="Road Works">Road Works</option>
+            <option value="Sanitation">Sanitation</option>
+            <option value="Electricity">Electricity</option>
+            <option value="Parks & Recreation">Parks & Recreation</option>
+            <option value="Drainage">Drainage</option>
+            <option value="Street Lighting">Street Lighting</option>
+            <option value="General">General</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Priority</label>
+          <select id="assign-priority">
+            <option value="">Select Priority</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="CRITICAL">Critical</option>
+          </select>
+        </div>
+        <div>
+          <label>Deadline</label>
+          <input type="datetime-local" id="assign-deadline"/>
+        </div>
+      </div>
+      <div class="form-full">
+        <label>Update Status</label>
+        <select id="assign-status">
+          <option value="">Keep Current</option>
+          <option value="PENDING">Pending</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="CLOSED">Closed</option>
+        </select>
+      </div>
+      <div class="form-full">
+        <label>Remarks / Notes</label>
+        <textarea id="assign-remarks" placeholder="Add internal notes or remarks for the officer…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeAssignModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAssign()">Save Assignment</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ DETAIL MODAL ═══════════════════ -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="detail-title">Grievance Detail</div>
+        <div class="modal-sub" id="detail-sub">#—</div>
+      </div>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="detail-body">
+      <div class="loading"><span class="spinner"></span>Loading…</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDetailModal()">Close</button>
+      <button class="btn btn-primary" id="detail-assign-btn">Assign / Edit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+const API = '/api/grievances';
+let token = localStorage.getItem('token');
+let allGrievances = [];
+let currentGrievanceId = null;
+
+// ── Auth guard ──────────────────────────────────────────────────────────────
+function init() {
+  if (!token) { window.location.href = 'index.html'; return; }
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const role = payload.role || '';
+    if (role !== 'ADMIN') {
+      alert('Access denied. Admin role required.');
+      window.location.href = 'dashboard.html';
+      return;
+    }
+    const username = payload.sub || 'Admin';
+    document.getElementById('sidebar-avatar').textContent = username.charAt(0).toUpperCase();
+    document.getElementById('sidebar-name').textContent   = username;
+    document.getElementById('sidebar-role-text').textContent = 'Administrator';
+  } catch(e) { window.location.href = 'index.html'; return; }
+  loadGrievances();
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  window.location.href = 'index.html';
+}
+
+// ── Load all grievances ─────────────────────────────────────────────────────
+async function loadGrievances() {
+  document.getElementById('table-content').innerHTML =
+    '<div class="loading"><span class="spinner"></span>Loading grievances…</div>';
+  try {
+    const res  = await fetch(API + '/all', { headers: { Authorization: 'Bearer ' + token } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load');
+    allGrievances = data;
+    updateStats(data);
+    applyFilters();
+  } catch (e) {
+    document.getElementById('table-content').innerHTML =
+      `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Error</div><div class="empty-text">${e.message}</div></div>`;
+  }
+}
+
+function updateStats(data) {
+  const total      = data.length;
+  const pending    = data.filter(g => g.status === 'PENDING').length;
+  const inprogress = data.filter(g => g.status === 'IN_PROGRESS').length;
+  const resolved   = data.filter(g => g.status === 'RESOLVED').length;
+  document.getElementById('stat-total').textContent     = total;
+  document.getElementById('stat-pending').textContent   = pending;
+  document.getElementById('stat-inprogress').textContent= inprogress;
+  document.getElementById('stat-resolved').textContent  = resolved;
+  document.getElementById('nav-total').textContent      = total;
+}
+
+// ── Filters ─────────────────────────────────────────────────────────────────
+function filterAll() {
+  document.getElementById('filter-status').value   = '';
+  document.getElementById('filter-priority').value = '';
+  document.getElementById('filter-category').value = '';
+  document.getElementById('search-input').value    = '';
+  applyFilters();
+}
+
+function filterByStatus(status) {
+  document.getElementById('filter-status').value = status;
+  applyFilters();
+}
+
+function applyFilters() {
+  const search   = document.getElementById('search-input').value.toLowerCase().trim();
+  const fStatus  = document.getElementById('filter-status').value;
+  const fPriority= document.getElementById('filter-priority').value;
+  const fCat     = document.getElementById('filter-category').value;
+
+  let filtered = allGrievances;
+  if (fStatus)   filtered = filtered.filter(g => g.status   === fStatus);
+  if (fPriority) filtered = filtered.filter(g => g.priority === fPriority);
+  if (fCat)      filtered = filtered.filter(g => g.category === fCat);
+  if (search)    filtered = filtered.filter(g =>
+    g.title.toLowerCase().includes(search) ||
+    g.citizenUsername.toLowerCase().includes(search) ||
+    g.category.toLowerCase().includes(search) ||
+    (g.assignedOfficer || '').toLowerCase().includes(search)
+  );
+
+  renderTable(filtered);
+}
+
+// ── Render table ─────────────────────────────────────────────────────────────
+function renderTable(data) {
+  const count = data.length;
+  document.getElementById('table-count').textContent =
+    count === 0 ? 'No grievances found' : `${count} grievance${count !== 1 ? 's' : ''}`;
+
+  if (count === 0) {
+    document.getElementById('table-content').innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">No grievances found</div>
+        <div class="empty-text">Try adjusting your filters or search terms.</div>
+      </div>`;
+    return;
+  }
+
+  const rows = data.map(g => `
+    <tr>
+      <td><span class="td-id">#${g.id}</span></td>
+      <td><span class="td-title" title="${esc(g.title)}">${esc(g.title)}</span></td>
+      <td><span class="category-chip">${fmt(g.category)}</span></td>
+      <td><span class="td-citizen">${esc(g.citizenUsername)}</span></td>
+      <td>${statusChip(g.status)}</td>
+      <td>${priorityChip(g.priority)}</td>
+      <td><span class="td-citizen">${g.assignedOfficer ? esc(g.assignedOfficer) : '<em style="color:#aaa">Unassigned</em>'}</span></td>
+      <td><span class="td-citizen">${g.deadline ? fmtDate(g.deadline) : '—'}</span></td>
+      <td>
+        <div class="td-actions">
+          <button class="action-btn action-view"   onclick="openDetail(${g.id})">View</button>
+          <button class="action-btn action-assign" onclick="openAssign(${g.id})">Assign</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('table-content').innerHTML = `
+    <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Title</th><th>Category</th><th>Citizen</th>
+          <th>Status</th><th>Priority</th><th>Officer</th><th>Deadline</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>`;
+}
+
+// ── Chip helpers ─────────────────────────────────────────────────────────────
+function statusChip(status) {
+  const label = status.replace('_', ' ');
+  return `<span class="chip chip-${status}"><span class="chip-dot"></span>${label}</span>`;
+}
+function priorityChip(priority) {
+  if (!priority) return `<span class="priority-chip priority-NONE">—</span>`;
+  return `<span class="priority-chip priority-${priority}">${priority}</span>`;
+}
+function fmt(str) {
+  if (!str) return '—';
+  return str.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+function fmtDate(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Assign Modal ─────────────────────────────────────────────────────────────
+function openAssign(id) {
+  currentGrievanceId = id;
+  const g = allGrievances.find(x => x.id === id);
+  document.getElementById('assign-modal-sub').textContent = `Grievance #${id} — ${g ? g.title : ''}`;
+  // Pre-fill existing values
+  document.getElementById('assign-officer').value  = g?.assignedOfficer || '';
+  document.getElementById('assign-dept').value     = g?.department      || '';
+  document.getElementById('assign-priority').value = g?.priority        || '';
+  document.getElementById('assign-status').value   = '';
+  document.getElementById('assign-remarks').value  = g?.remarks         || '';
+  if (g?.deadline) {
+    // convert to datetime-local format
+    const d = new Date(g.deadline);
+    const pad = n => String(n).padStart(2,'0');
+    document.getElementById('assign-deadline').value =
+      `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } else {
+    document.getElementById('assign-deadline').value = '';
+  }
+  document.getElementById('assign-modal').classList.add('open');
+}
+
+function closeAssignModal() {
+  document.getElementById('assign-modal').classList.remove('open');
+  currentGrievanceId = null;
+}
+
+async function submitAssign() {
+  if (!currentGrievanceId) return;
+  const officer  = document.getElementById('assign-officer').value.trim();
+  const dept     = document.getElementById('assign-dept').value;
+  const priority = document.getElementById('assign-priority').value;
+  const status   = document.getElementById('assign-status').value;
+  const remarks  = document.getElementById('assign-remarks').value.trim();
+  const deadlineRaw = document.getElementById('assign-deadline').value;
+
+  if (!officer && !priority && !status && !deadlineRaw && !dept) {
+    showToast('Please fill in at least one field.', 'error'); return;
+  }
+
+  const body = { grievanceId: currentGrievanceId };
+  if (officer)     body.assignedOfficer = officer;
+  if (dept)        body.department      = dept;
+  if (priority)    body.priority        = priority;
+  if (status)      body.status          = status;
+  if (remarks)     body.remarks         = remarks;
+  if (deadlineRaw) body.deadline        = new Date(deadlineRaw).toISOString().slice(0,19);
+
+  try {
+    const res  = await fetch(API + '/admin/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Assignment failed');
+    closeAssignModal();
+    showToast('✓ Grievance assigned successfully!', 'success');
+    await loadGrievances();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── Detail Modal ─────────────────────────────────────────────────────────────
+async function openDetail(id) {
+  currentGrievanceId = id;
+  document.getElementById('detail-title').textContent = 'Grievance Detail';
+  document.getElementById('detail-sub').textContent   = `#${id}`;
+  document.getElementById('detail-body').innerHTML    = '<div class="loading"><span class="spinner"></span>Loading…</div>';
+  document.getElementById('detail-modal').classList.add('open');
+  document.getElementById('detail-assign-btn').onclick = () => { closeDetailModal(); openAssign(id); };
+
+  const g = allGrievances.find(x => x.id === id);
+  if (!g) { document.getElementById('detail-body').innerHTML = '<p>Not found.</p>'; return; }
+
+  document.getElementById('detail-title').textContent = g.title;
+
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val">${statusChip(g.status)}</span></div>
+    <div class="detail-row"><span class="detail-key">Priority</span><span class="detail-val">${priorityChip(g.priority)}</span></div>
+    <div class="detail-row"><span class="detail-key">Category</span><span class="detail-val"><span class="category-chip">${fmt(g.category)}</span></span></div>
+    <div class="detail-row"><span class="detail-key">Citizen</span><span class="detail-val">${esc(g.citizenUsername)}</span></div>
+    <div class="detail-row"><span class="detail-key">Location</span><span class="detail-val">${g.location ? esc(g.location) : '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Submitted</span><span class="detail-val">${fmtDate(g.submittedAt)}</span></div>
+    <div class="detail-divider"></div>
+    <div class="detail-row"><span class="detail-key">Assigned To</span><span class="detail-val">${g.assignedOfficer ? esc(g.assignedOfficer) : '<em style="color:#aaa">Unassigned</em>'}</span></div>
+    <div class="detail-row"><span class="detail-key">Department</span><span class="detail-val">${g.department ? esc(g.department) : '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Deadline</span><span class="detail-val">${g.deadline ? fmtDate(g.deadline) : '—'}</span></div>
+    <div class="detail-divider"></div>
+    <div><span class="detail-key">Description</span></div>
+    <div class="detail-desc">${esc(g.description)}</div>
+    ${g.remarks ? `<div style="margin-top:12px"><span class="detail-key">Remarks</span></div><div class="detail-desc" style="margin-top:6px">${esc(g.remarks)}</div>` : ''}
+    ${g.imageBase64 ? `<div style="margin-top:14px"><img src="data:image/jpeg;base64,${g.imageBase64}" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Complaint photo"/></div>` : ''}
+  `;
+}
+
+function closeDetailModal() {
+  document.getElementById('detail-modal').classList.remove('open');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+// ── Close modal on backdrop click ─────────────────────────────────────────────
+document.getElementById('assign-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeAssignModal();
+});
+document.getElementById('detail-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeDetailModal();
+});
+
+init();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CivicPulse – Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { overflow-x: hidden; }
+    :root {
+      --ink: #0d1117; --ink-soft: #6b7280; --surface: #f3f5f9; --panel: #ffffff;
+      --accent: #1a56db; --accent-light: #e8effd;
+      --admin: #8b5cf6; --admin-bg: #f5f3ff; --admin-accent: #4c1d95;
+      --border: #e5e8f0; --sidebar-w: 260px;
+      --pending:    #f59e0b; --pending-bg:    #fffbeb;
+      --inprogress: #3b82f6; --inprogress-bg: #eff6ff;
+      --resolved:   #10b981; --resolved-bg:   #ecfdf5;
+      --closed:     #6b7280; --closed-bg:     #f9fafb;
+      --low:      #10b981; --medium: #f59e0b; --high: #ef4444; --critical: #7c3aed;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--ink); display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh;
+      overflow-y: auto; z-index: 100; transition: transform 0.3s;
+    }
+    .sidebar-top { padding: 28px 20px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .logo-icon { width: 34px; height: 34px; background: var(--admin); border-radius: 9px; display: grid; place-items: center; }
+    .logo-icon svg { width: 18px; height: 18px; fill: white; }
+    .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: white; }
+    .logo-sub  { font-size: .72rem; color: rgba(255,255,255,.4); letter-spacing: .04em; }
+    .sidebar-role { margin-top: 14px; display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(139,92,246,.18); border-radius: 20px; padding: 5px 12px; }
+    .role-dot { width: 8px; height: 8px; background: var(--admin); border-radius: 50%; }
+    .role-label { font-size: .75rem; color: var(--admin); font-weight: 600; letter-spacing:.04em; text-transform: uppercase; }
+
+    .sidebar-nav { flex: 1; padding: 16px 12px; }
+    .nav-section-label { font-size: .65rem; color: rgba(255,255,255,.3); letter-spacing:.1em;
+      text-transform: uppercase; padding: 8px 10px 4px; }
+    .nav-item { display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+      border-radius: 10px; cursor: pointer; transition: background .15s; color: rgba(255,255,255,.65);
+      font-size: .88rem; text-decoration: none; margin-bottom: 2px; }
+    .nav-item:hover { background: rgba(255,255,255,.07); color: white; }
+    .nav-item.active { background: rgba(139,92,246,.22); color: white; }
+    .nav-item svg { width: 17px; height: 17px; flex-shrink: 0; opacity: .8; }
+    .nav-badge { margin-left: auto; background: var(--admin); color: white; font-size: .65rem;
+      font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+
+    .sidebar-footer { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,.08); }
+    .user-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; }
+    .user-avatar { width: 34px; height: 34px; background: var(--admin); border-radius: 9px;
+      display: grid; place-items: center; color: white; font-weight: 700; font-size: .85rem; }
+    .user-name  { font-size: .85rem; color: white; font-weight: 600; }
+    .user-email { font-size: .72rem; color: rgba(255,255,255,.4); }
+    .logout-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px;
+      margin-top: 6px; border-radius: 10px; border: none; background: rgba(239,68,68,.12);
+      color: #f87171; font-size: .82rem; cursor: pointer; transition: background .15s; font-family: inherit; }
+    .logout-btn:hover { background: rgba(239,68,68,.22); }
+
+    /* ── Main ── */
+    .main { margin-left: var(--sidebar-w); padding: 0; min-height: 100vh; }
+
+    .topbar { background: var(--panel); border-bottom: 1px solid var(--border);
+      padding: 16px 32px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50; }
+    .topbar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.15rem; color: var(--ink); }
+    .topbar-sub   { font-size: .78rem; color: var(--ink-soft); margin-top: 1px; }
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+    .btn { padding: 8px 16px; border-radius: 9px; font-size: .82rem; font-weight: 600;
+      cursor: pointer; border: none; font-family: inherit; transition: all .15s; }
+    .btn-primary { background: var(--admin); color: white; }
+    .btn-primary:hover { background: #7c3aed; }
+    .btn-outline { background: transparent; color: var(--ink-soft); border: 1px solid var(--border); }
+    .btn-outline:hover { background: var(--surface); }
+
+    .content { padding: 28px 32px; }
+
+    /* ── Stats cards ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px 22px; cursor: pointer; transition: box-shadow .15s, transform .12s; }
+    .stat-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.07); transform: translateY(-1px); }
+    .stat-card.active { border-color: var(--admin); box-shadow: 0 0 0 2px rgba(139,92,246,.2); }
+    .stat-label { font-size: .75rem; color: var(--ink-soft); font-weight: 500; letter-spacing:.03em; text-transform: uppercase; }
+    .stat-number { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; margin: 4px 0 6px; }
+    .stat-trend  { font-size: .75rem; color: var(--ink-soft); }
+    .stat-icon   { float: right; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; }
+    .stat-icon svg { width: 18px; height: 18px; }
+
+    /* ── Toolbar ── */
+    .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+    .search-box { display: flex; align-items: center; gap: 8px; background: var(--panel);
+      border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; flex: 1; min-width: 200px; }
+    .search-box svg { width: 16px; height: 16px; color: var(--ink-soft); flex-shrink: 0; }
+    .search-box input { border: none; outline: none; font-family: inherit; font-size: .85rem;
+      color: var(--ink); background: transparent; width: 100%; }
+    .search-box input::placeholder { color: var(--ink-soft); }
+    .filter-select { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 14px; font-family: inherit; font-size: .85rem; color: var(--ink); cursor: pointer; outline: none; }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; }
+    .table-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: .95rem; }
+    .table-count { font-size: .78rem; color: var(--ink-soft); }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 11px 16px; text-align: left; font-size: .72rem; font-weight: 600;
+      color: var(--ink-soft); letter-spacing: .05em; text-transform: uppercase;
+      background: #fafbfc; border-bottom: 1px solid var(--border); }
+    tbody tr { border-bottom: 1px solid #f1f3f8; transition: background .1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafbff; }
+    td { padding: 13px 16px; font-size: .84rem; vertical-align: middle; }
+    .td-id { font-family: monospace; font-size: .75rem; color: var(--ink-soft); }
+    .td-title { font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .td-citizen { color: var(--ink-soft); font-size: .8rem; }
+    .td-actions { display: flex; gap: 6px; }
+
+    /* ── Chips ── */
+    .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+      border-radius: 20px; font-size: .72rem; font-weight: 600; letter-spacing: .02em; }
+    .chip-PENDING    { background: var(--pending-bg);    color: #92400e; }
+    .chip-IN_PROGRESS{ background: var(--inprogress-bg); color: #1e40af; }
+    .chip-RESOLVED   { background: var(--resolved-bg);   color: #065f46; }
+    .chip-CLOSED     { background: var(--closed-bg);     color: #374151; }
+    .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .priority-chip { display: inline-block; padding: 2px 9px; border-radius: 6px; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .priority-LOW      { background: #d1fae5; color: #065f46; }
+    .priority-MEDIUM   { background: #fef3c7; color: #92400e; }
+    .priority-HIGH     { background: #fee2e2; color: #991b1b; }
+    .priority-CRITICAL { background: #ede9fe; color: #4c1d95; }
+    .priority-NONE     { background: #f3f4f6; color: #6b7280; }
+
+    .category-chip { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: .7rem; font-weight: 600; background: var(--accent-light); color: var(--accent); }
+
+    .action-btn { padding: 5px 11px; border-radius: 7px; font-size: .76rem; font-weight: 600;
+      cursor: pointer; border: none; font-family: inherit; transition: all .15s; }
+    .action-assign { background: var(--admin-bg); color: var(--admin); }
+    .action-assign:hover { background: #ede9fe; }
+    .action-view   { background: var(--accent-light); color: var(--accent); }
+    .action-view:hover { background: #dbeafe; }
+
+    /* ── Modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--panel); border-radius: 18px; width: 100%; max-width: 560px;
+      max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      animation: slideUp .2s ease; }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header { padding: 22px 24px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; }
+    .modal-sub   { font-size: .78rem; color: var(--ink-soft); margin-top: 2px; }
+    .modal-close { width: 32px; height: 32px; border: none; background: var(--surface);
+      border-radius: 8px; cursor: pointer; display: grid; place-items: center; font-size: 1.1rem; color: var(--ink-soft); }
+    .modal-close:hover { background: var(--border); }
+    .modal-body   { padding: 22px 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+    .form-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-full { margin-bottom: 14px; }
+    label { display: block; font-size: .78rem; font-weight: 600; color: var(--ink-soft);
+      margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+    input, select, textarea {
+      width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px;
+      font-family: inherit; font-size: .85rem; color: var(--ink); background: var(--surface);
+      outline: none; transition: border .15s; }
+    input:focus, select:focus, textarea:focus { border-color: var(--admin); background: white; box-shadow: 0 0 0 3px rgba(139,92,246,.1); }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* ── Detail Modal ── */
+    .detail-row { display: flex; margin-bottom: 12px; }
+    .detail-key { width: 130px; font-size: .78rem; color: var(--ink-soft); font-weight: 500; flex-shrink: 0; padding-top: 1px; }
+    .detail-val { font-size: .85rem; color: var(--ink); flex: 1; }
+    .detail-desc { margin-top: 12px; padding: 12px 14px; background: var(--surface); border-radius: 10px; font-size: .84rem; line-height: 1.6; color: var(--ink); }
+    .detail-divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1c1c1c; color: white;
+      padding: 12px 18px; border-radius: 12px; font-size: .85rem; font-weight: 500;
+      z-index: 999; animation: toastIn .25s ease; max-width: 320px; display: flex; align-items: center; gap: 10px; }
+    @keyframes toastIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+    .toast-success { border-left: 4px solid #10b981; }
+    .toast-error   { border-left: 4px solid #ef4444; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 56px 20px; color: var(--ink-soft); }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; color: var(--ink); margin-bottom: 4px; }
+    .empty-text  { font-size: .84rem; }
+
+    /* ── Loading ── */
+    .loading { text-align: center; padding: 48px; color: var(--ink-soft); font-size: .88rem; }
+    .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border);
+      border-top-color: var(--admin); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .main { margin-left: 0; }
+      .content, .topbar { padding-left: 20px; padding-right: 20px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-top">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      </div>
+      <div>
+        <div class="logo-text">CivicPulse</div>
+        <div class="logo-sub">Smart City Portal</div>
+      </div>
+    </div>
+    <div class="sidebar-role">
+      <div class="role-dot"></div>
+      <span class="role-label">Admin Panel</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Management</div>
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item active" onclick="filterAll()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+      All Grievances
+      <span class="nav-badge" id="nav-total">0</span>
+    </a>
+    <a class="nav-item" onclick="filterByStatus('PENDING')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      Pending
+    </a>
+    <a class="nav-item" onclick="filterByStatus('IN_PROGRESS')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      In Progress
+    </a>
+    <a class="nav-item" onclick="filterByStatus('RESOLVED')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+      Resolved
+    </a>
+
+    <div class="nav-section-label" style="margin-top:12px">Navigation</div>
+    <a href="submit.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      Submit Grievance
+    </a>
+    <a href="index.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      Home
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar" id="sidebar-avatar">A</div>
+      <div>
+        <div class="user-name" id="sidebar-name">Admin</div>
+        <div class="user-email" id="sidebar-role-text">Administrator</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+      Sign out
+    </button>
+  </div>
+</aside>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Grievance Management</div>
+      <div class="topbar-sub">View, assign, and prioritise all citizen complaints</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-outline" onclick="loadGrievances()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card" onclick="filterAll()">
+        <div class="stat-icon" style="background:#f5f3ff"><svg viewBox="0 0 24 24" fill="#8b5cf6"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>
+        <div class="stat-label">Total</div>
+        <div class="stat-number" id="stat-total" style="color:#8b5cf6">—</div>
+        <div class="stat-trend">All grievances</div>
+      </div>
+      <div class="stat-card" onclick="filterByStatus('PENDING')">
+        <div class="stat-icon" style="background:#fffbeb"><svg viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+        <div class="stat-label">Pending</div>
+        <div class="stat-number" id="stat-pending" style="color:#f59e0b">—</div>
+        <div class="stat-trend">Awaiting assignment</div>
+      </div>
+      <div class="stat-card" onclick="filterByStatus('IN_PROGRESS')">
+        <div class="stat-icon" style="background:#eff6ff"><svg viewBox="0 0 24 24" fill="#3b82f6"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div>
+        <div class="stat-label">In Progress</div>
+        <div class="stat-number" id="stat-inprogress" style="color:#3b82f6">—</div>
+        <div class="stat-trend">Being handled</div>
+      </div>
+      <div class="stat-card" onclick="filterByStatus('RESOLVED')">
+        <div class="stat-icon" style="background:#ecfdf5"><svg viewBox="0 0 24 24" fill="#10b981"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>
+        <div class="stat-label">Resolved</div>
+        <div class="stat-number" id="stat-resolved" style="color:#10b981">—</div>
+        <div class="stat-trend">Closed successfully</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="search-input" placeholder="Search by title, citizen, category…" oninput="applyFilters()"/>
+      </div>
+      <select class="filter-select" id="filter-status" onchange="applyFilters()">
+        <option value="">All Statuses</option>
+        <option value="PENDING">Pending</option>
+        <option value="IN_PROGRESS">In Progress</option>
+        <option value="RESOLVED">Resolved</option>
+        <option value="CLOSED">Closed</option>
+      </select>
+      <select class="filter-select" id="filter-priority" onchange="applyFilters()">
+        <option value="">All Priorities</option>
+        <option value="CRITICAL">Critical</option>
+        <option value="HIGH">High</option>
+        <option value="MEDIUM">Medium</option>
+        <option value="LOW">Low</option>
+      </select>
+      <select class="filter-select" id="filter-category" onchange="applyFilters()">
+        <option value="">All Categories</option>
+        <option value="WATER">Water</option>
+        <option value="STREET_LIGHT">Street Light</option>
+        <option value="ROAD">Road</option>
+        <option value="SANITATION">Sanitation</option>
+        <option value="DRAINAGE">Drainage</option>
+        <option value="PARK">Park</option>
+        <option value="ELECTRICITY">Electricity</option>
+        <option value="OTHER">Other</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <div>
+          <div class="table-title">Grievances</div>
+          <div class="table-count" id="table-count">Loading…</div>
+        </div>
+      </div>
+      <div id="table-content">
+        <div class="loading"><span class="spinner"></span>Loading grievances…</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ═══════════════════ ASSIGN MODAL ═══════════════════ -->
+<div class="modal-overlay" id="assign-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Assign & Prioritise</div>
+        <div class="modal-sub" id="assign-modal-sub">Grievance #—</div>
+      </div>
+      <button class="modal-close" onclick="closeAssignModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div>
+          <label>Assign To Officer</label>
+          <input type="text" id="assign-officer" placeholder="e.g. officer.john"/>
+        </div>
+        <div>
+          <label>Department</label>
+          <select id="assign-dept">
+            <option value="">Select Department</option>
+            <option value="Water Supply">Water Supply</option>
+            <option value="Road Works">Road Works</option>
+            <option value="Sanitation">Sanitation</option>
+            <option value="Electricity">Electricity</option>
+            <option value="Parks & Recreation">Parks & Recreation</option>
+            <option value="Drainage">Drainage</option>
+            <option value="Street Lighting">Street Lighting</option>
+            <option value="General">General</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Priority</label>
+          <select id="assign-priority">
+            <option value="">Select Priority</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="CRITICAL">Critical</option>
+          </select>
+        </div>
+        <div>
+          <label>Deadline</label>
+          <input type="datetime-local" id="assign-deadline"/>
+        </div>
+      </div>
+      <div class="form-full">
+        <label>Update Status</label>
+        <select id="assign-status">
+          <option value="">Keep Current</option>
+          <option value="PENDING">Pending</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="CLOSED">Closed</option>
+        </select>
+      </div>
+      <div class="form-full">
+        <label>Remarks / Notes</label>
+        <textarea id="assign-remarks" placeholder="Add internal notes or remarks for the officer…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeAssignModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAssign()">Save Assignment</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ DETAIL MODAL ═══════════════════ -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="detail-title">Grievance Detail</div>
+        <div class="modal-sub" id="detail-sub">#—</div>
+      </div>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="detail-body">
+      <div class="loading"><span class="spinner"></span>Loading…</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDetailModal()">Close</button>
+      <button class="btn btn-primary" id="detail-assign-btn">Assign / Edit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api/grievances';
+let token = localStorage.getItem('token');
+let allGrievances = [];
+let currentGrievanceId = null;
+
+// ── Auth guard ──────────────────────────────────────────────────────────────
+function init() {
+  if (!token) { window.location.href = 'index.html'; return; }
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const role = payload.role || '';
+    if (role !== 'ADMIN') {
+      alert('Access denied. Admin role required.');
+      window.location.href = 'dashboard.html';
+      return;
+    }
+    const username = payload.sub || 'Admin';
+    document.getElementById('sidebar-avatar').textContent = username.charAt(0).toUpperCase();
+    document.getElementById('sidebar-name').textContent   = username;
+    document.getElementById('sidebar-role-text').textContent = 'Administrator';
+  } catch(e) { window.location.href = 'index.html'; return; }
+  loadGrievances();
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  window.location.href = 'index.html';
+}
+
+// ── Load all grievances ─────────────────────────────────────────────────────
+async function loadGrievances() {
+  document.getElementById('table-content').innerHTML =
+    '<div class="loading"><span class="spinner"></span>Loading grievances…</div>';
+  try {
+    const res  = await fetch(API + '/all', { headers: { Authorization: 'Bearer ' + token } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load');
+    allGrievances = data;
+    updateStats(data);
+    applyFilters();
+  } catch (e) {
+    document.getElementById('table-content').innerHTML =
+      `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Error</div><div class="empty-text">${e.message}</div></div>`;
+  }
+}
+
+function updateStats(data) {
+  const total      = data.length;
+  const pending    = data.filter(g => g.status === 'PENDING').length;
+  const inprogress = data.filter(g => g.status === 'IN_PROGRESS').length;
+  const resolved   = data.filter(g => g.status === 'RESOLVED').length;
+  document.getElementById('stat-total').textContent     = total;
+  document.getElementById('stat-pending').textContent   = pending;
+  document.getElementById('stat-inprogress').textContent= inprogress;
+  document.getElementById('stat-resolved').textContent  = resolved;
+  document.getElementById('nav-total').textContent      = total;
+}
+
+// ── Filters ─────────────────────────────────────────────────────────────────
+function filterAll() {
+  document.getElementById('filter-status').value   = '';
+  document.getElementById('filter-priority').value = '';
+  document.getElementById('filter-category').value = '';
+  document.getElementById('search-input').value    = '';
+  applyFilters();
+}
+
+function filterByStatus(status) {
+  document.getElementById('filter-status').value = status;
+  applyFilters();
+}
+
+function applyFilters() {
+  const search   = document.getElementById('search-input').value.toLowerCase().trim();
+  const fStatus  = document.getElementById('filter-status').value;
+  const fPriority= document.getElementById('filter-priority').value;
+  const fCat     = document.getElementById('filter-category').value;
+
+  let filtered = allGrievances;
+  if (fStatus)   filtered = filtered.filter(g => g.status   === fStatus);
+  if (fPriority) filtered = filtered.filter(g => g.priority === fPriority);
+  if (fCat)      filtered = filtered.filter(g => g.category === fCat);
+  if (search)    filtered = filtered.filter(g =>
+    g.title.toLowerCase().includes(search) ||
+    g.citizenUsername.toLowerCase().includes(search) ||
+    g.category.toLowerCase().includes(search) ||
+    (g.assignedOfficer || '').toLowerCase().includes(search)
+  );
+
+  renderTable(filtered);
+}
+
+// ── Render table ─────────────────────────────────────────────────────────────
+function renderTable(data) {
+  const count = data.length;
+  document.getElementById('table-count').textContent =
+    count === 0 ? 'No grievances found' : `${count} grievance${count !== 1 ? 's' : ''}`;
+
+  if (count === 0) {
+    document.getElementById('table-content').innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">No grievances found</div>
+        <div class="empty-text">Try adjusting your filters or search terms.</div>
+      </div>`;
+    return;
+  }
+
+  const rows = data.map(g => `
+    <tr>
+      <td><span class="td-id">#${g.id}</span></td>
+      <td><span class="td-title" title="${esc(g.title)}">${esc(g.title)}</span></td>
+      <td><span class="category-chip">${fmt(g.category)}</span></td>
+      <td><span class="td-citizen">${esc(g.citizenUsername)}</span></td>
+      <td>${statusChip(g.status)}</td>
+      <td>${priorityChip(g.priority)}</td>
+      <td><span class="td-citizen">${g.assignedOfficer ? esc(g.assignedOfficer) : '<em style="color:#aaa">Unassigned</em>'}</span></td>
+      <td><span class="td-citizen">${g.deadline ? fmtDate(g.deadline) : '—'}</span></td>
+      <td>
+        <div class="td-actions">
+          <button class="action-btn action-view"   onclick="openDetail(${g.id})">View</button>
+          <button class="action-btn action-assign" onclick="openAssign(${g.id})">Assign</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('table-content').innerHTML = `
+    <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Title</th><th>Category</th><th>Citizen</th>
+          <th>Status</th><th>Priority</th><th>Officer</th><th>Deadline</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>`;
+}
+
+// ── Chip helpers ─────────────────────────────────────────────────────────────
+function statusChip(status) {
+  const label = status.replace('_', ' ');
+  return `<span class="chip chip-${status}"><span class="chip-dot"></span>${label}</span>`;
+}
+function priorityChip(priority) {
+  if (!priority) return `<span class="priority-chip priority-NONE">—</span>`;
+  return `<span class="priority-chip priority-${priority}">${priority}</span>`;
+}
+function fmt(str) {
+  if (!str) return '—';
+  return str.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+function fmtDate(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Assign Modal ─────────────────────────────────────────────────────────────
+function openAssign(id) {
+  currentGrievanceId = id;
+  const g = allGrievances.find(x => x.id === id);
+  document.getElementById('assign-modal-sub').textContent = `Grievance #${id} — ${g ? g.title : ''}`;
+  // Pre-fill existing values
+  document.getElementById('assign-officer').value  = g?.assignedOfficer || '';
+  document.getElementById('assign-dept').value     = g?.department      || '';
+  document.getElementById('assign-priority').value = g?.priority        || '';
+  document.getElementById('assign-status').value   = '';
+  document.getElementById('assign-remarks').value  = g?.remarks         || '';
+  if (g?.deadline) {
+    // convert to datetime-local format
+    const d = new Date(g.deadline);
+    const pad = n => String(n).padStart(2,'0');
+    document.getElementById('assign-deadline').value =
+      `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } else {
+    document.getElementById('assign-deadline').value = '';
+  }
+  document.getElementById('assign-modal').classList.add('open');
+}
+
+function closeAssignModal() {
+  document.getElementById('assign-modal').classList.remove('open');
+  currentGrievanceId = null;
+}
+
+async function submitAssign() {
+  if (!currentGrievanceId) return;
+  const officer  = document.getElementById('assign-officer').value.trim();
+  const dept     = document.getElementById('assign-dept').value;
+  const priority = document.getElementById('assign-priority').value;
+  const status   = document.getElementById('assign-status').value;
+  const remarks  = document.getElementById('assign-remarks').value.trim();
+  const deadlineRaw = document.getElementById('assign-deadline').value;
+
+  if (!officer && !priority && !status && !deadlineRaw && !dept) {
+    showToast('Please fill in at least one field.', 'error'); return;
+  }
+
+  const body = { grievanceId: currentGrievanceId };
+  if (officer)     body.assignedOfficer = officer;
+  if (dept)        body.department      = dept;
+  if (priority)    body.priority        = priority;
+  if (status)      body.status          = status;
+  if (remarks)     body.remarks         = remarks;
+  if (deadlineRaw) body.deadline        = new Date(deadlineRaw).toISOString().slice(0,19);
+
+  try {
+    const res  = await fetch(API + '/admin/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Assignment failed');
+    closeAssignModal();
+    showToast('✓ Grievance assigned successfully!', 'success');
+    await loadGrievances();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── Detail Modal ─────────────────────────────────────────────────────────────
+async function openDetail(id) {
+  currentGrievanceId = id;
+  document.getElementById('detail-title').textContent = 'Grievance Detail';
+  document.getElementById('detail-sub').textContent   = `#${id}`;
+  document.getElementById('detail-body').innerHTML    = '<div class="loading"><span class="spinner"></span>Loading…</div>';
+  document.getElementById('detail-modal').classList.add('open');
+  document.getElementById('detail-assign-btn').onclick = () => { closeDetailModal(); openAssign(id); };
+
+  const g = allGrievances.find(x => x.id === id);
+  if (!g) { document.getElementById('detail-body').innerHTML = '<p>Not found.</p>'; return; }
+
+  document.getElementById('detail-title').textContent = g.title;
+
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val">${statusChip(g.status)}</span></div>
+    <div class="detail-row"><span class="detail-key">Priority</span><span class="detail-val">${priorityChip(g.priority)}</span></div>
+    <div class="detail-row"><span class="detail-key">Category</span><span class="detail-val"><span class="category-chip">${fmt(g.category)}</span></span></div>
+    <div class="detail-row"><span class="detail-key">Citizen</span><span class="detail-val">${esc(g.citizenUsername)}</span></div>
+    <div class="detail-row"><span class="detail-key">Location</span><span class="detail-val">${g.location ? esc(g.location) : '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Submitted</span><span class="detail-val">${fmtDate(g.submittedAt)}</span></div>
+    <div class="detail-divider"></div>
+    <div class="detail-row"><span class="detail-key">Assigned To</span><span class="detail-val">${g.assignedOfficer ? esc(g.assignedOfficer) : '<em style="color:#aaa">Unassigned</em>'}</span></div>
+    <div class="detail-row"><span class="detail-key">Department</span><span class="detail-val">${g.department ? esc(g.department) : '—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Deadline</span><span class="detail-val">${g.deadline ? fmtDate(g.deadline) : '—'}</span></div>
+    <div class="detail-divider"></div>
+    <div><span class="detail-key">Description</span></div>
+    <div class="detail-desc">${esc(g.description)}</div>
+    ${g.remarks ? `<div style="margin-top:12px"><span class="detail-key">Remarks</span></div><div class="detail-desc" style="margin-top:6px">${esc(g.remarks)}</div>` : ''}
+    ${g.imageBase64 ? `<div style="margin-top:14px"><img src="data:image/jpeg;base64,${g.imageBase64}" style="max-width:100%;border-radius:10px;border:1px solid var(--border)" alt="Complaint photo"/></div>` : ''}
+  `;
+}
+
+function closeDetailModal() {
+  document.getElementById('detail-modal').classList.remove('open');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+// ── Close modal on backdrop click ─────────────────────────────────────────────
+document.getElementById('assign-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeAssignModal();
+});
+document.getElementById('detail-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeDetailModal();
+});
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CivicPulse – Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #0d1117; --ink-soft: #6b7280; --surface: #f0f2f7; --panel: #ffffff;
+      --admin: #7c3aed; --admin-soft: #ede9fe; --admin-hover: #6d28d9;
+      --border: #e4e7ef; --sidebar-w: 268px;
+      --pending: #f59e0b; --progress: #3b82f6; --resolved: #10b981; --closed: #9ca3af;
+      --low: #10b981; --medium: #f59e0b; --high: #ef4444; --critical: #7c3aed;
+    }
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); }
+    .app { display: block; min-height: 100vh; }
+    .sidebar { background: var(--ink); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh; overflow-y: auto; z-index: 100; }
+    .sidebar-logo { padding: 24px 20px; display: flex; align-items: center; gap: 11px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .logo-mark { width: 36px; height: 36px; background: var(--admin); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+    .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: white; }
+    .admin-profile { margin: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.25); }
+    .admin-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: #a78bfa; font-weight: 700; }
+    .admin-name { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700; color: white; margin-top: 2px; }
+    .nav-group { padding: 16px 12px 4px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; color: rgba(255,255,255,0.5); font-size: 0.87rem; font-weight: 500; transition: all 0.15s; margin-bottom: 2px; text-decoration: none; }
+    .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
+    .nav-item.active { background: var(--admin); color: white; }
+    .sidebar-footer { margin-top: auto; padding: 14px; border-top: 1px solid rgba(255,255,255,0.07); }
+    .logout-btn { width: 100%; padding: 10px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: #f87171; font-family: 'DM Sans', sans-serif; font-size: 0.84rem; cursor: pointer; }
+
+    .main { padding-left: var(--sidebar-w); min-height: 100vh; width: 100%; }
+    .topbar { background: var(--panel); border-bottom: 1px solid var(--border); padding: 15px 28px; position: sticky; top: 0; z-index: 50; }
+    .topbar-content { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; width: 100%; }
+    .topbar-left h1 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem; }
+    .content { padding: 28px; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--c, var(--admin)); }
+    .stat-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.7rem; color: var(--c, var(--admin)); line-height: 1; }
+    .stat-label { font-size: 0.72rem; color: var(--ink-soft); margin-top: 4px; font-weight: 600; text-transform: uppercase; }
+
+    .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+    .search-box { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1.5px solid var(--border); border-radius: 10px; padding: 9px 14px; flex: 1; min-width: 200px; max-width: 320px; }
+    .search-box input { border: none; outline: none; font-size: 0.88rem; width: 100%; }
+    .filter-select { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--panel); cursor: pointer; }
+    .refresh-btn { padding: 9px 16px; background: var(--admin-soft); border: none; border-radius: 10px; color: var(--admin); font-weight: 600; cursor: pointer; }
+
+    .table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 12px 16px; text-align: left; font-size: 0.72rem; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; border-bottom: 1px solid var(--border); }
+    td { padding: 14px 16px; border-bottom: 1px solid #f1f3f8; font-size: 0.86rem; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+    .s-PENDING { background: #fef3c7; color: #92400e; }
+    .s-IN_PROGRESS { background: #dbeafe; color: #1e40af; }
+    .s-RESOLVED { background: #d1fae5; color: #065f46; }
+    .p-HIGH { background: #fee2e2; color: #991b1b; }
+    .action-btn { padding: 6px 12px; background: var(--admin-soft); border: none; border-radius: 8px; color: var(--admin); font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+    .overlay.show { display: flex; }
+    .modal { background: white; border-radius: 20px; width: 100%; max-width: 580px; padding: 28px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 0.78rem; font-weight: 600; margin-bottom: 6px; }
+    .field select, .field input, .field textarea { width: 100%; padding: 10px; border: 1.5px solid var(--border); border-radius: 10px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-save { flex: 1; padding: 12px; background: var(--admin); color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; }
+    .toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 12px 20px; border-radius: 10px; display: none; z-index: 1000; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="sidebar-logo"><div class="logo-mark">🛡️</div><span class="logo-text">CivicPulse Admin</span></div>
+    <div class="admin-profile"><div class="admin-label">Admin</div><div class="admin-name" id="adminName">Admin</div></div>
+    <div class="nav-group">
+      <a class="nav-item" href="dashboard.html">Overview</a>
+      <a class="nav-item active" href="admingrievances.html">All Grievances</a>
+      <a class="nav-item" href="assignofficers.html">Assign Officers</a>
+    </div>
+    <div class="sidebar-footer"><button class="logout-btn" onclick="logout()">Sign Out</button></div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-content">
+        <div class="topbar-left">
+          <h1>Grievance Management</h1>
+        </div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="stats-grid">
+        <div class="stat-card" style="--c:#6b7280"><div class="stat-num" id="sTotal">0</div><div class="stat-label">Total</div></div>
+        <div class="stat-card" style="--c:#f59e0b"><div class="stat-num" id="sPending">0</div><div class="stat-label">Pending</div></div>
+        <div class="stat-card" style="--c:#3b82f6"><div class="stat-num" id="sProgress">0</div><div class="stat-label">In Progress</div></div>
+        <div class="stat-card" style="--c:#10b981"><div class="stat-num" id="sResolved">0</div><div class="stat-label">Resolved</div></div>
+        <div class="stat-card" style="--c:#ef4444"><div class="stat-num" id="sHigh">0</div><div class="stat-label">High Priority</div></div>
+        <div class="stat-card" style="--c:#7c3aed"><div class="stat-num" id="sCritical">0</div><div class="stat-label">Critical</div></div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box"><input type="text" id="searchInput" placeholder="Search..." oninput="applyFilters()"/></div>
+        <select class="filter-select" id="statusFilter" onchange="applyFilters()"><option value="">All Status</option><option value="PENDING">Pending</option><option value="IN_PROGRESS">In Progress</option><option value="RESOLVED">Resolved</option></select>
+        <button class="refresh-btn" onclick="loadData()">Refresh</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#ID</th><th>Title</th><th>Category</th><th>Status</th><th>Officer</th><th>Action</th></tr></thead>
+          <tbody id="grievanceTable"><tr><td colspan="6">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Manage Grievance</h2>
+    <div class="field"><label>Status</label><select id="fStatus"><option value="PENDING">Pending</option><option value="IN_PROGRESS">In Progress</option><option value="RESOLVED">Resolved</option><option value="CLOSED">Closed</option></select></div>
+    <div class="field"><label>Priority</label><select id="fPriority"><option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option></select></div>
+    <div class="field"><label>Assign Officer</label><select id="fOfficer"><option value="">Unassigned</option></select></div>
+    <div class="field"><label>Remarks</label><textarea id="fRemarks"></textarea></div>
+    <div class="btn-row"><button onclick="closeModal()">Cancel</button><button class="btn-save" id="saveBtn" onclick="saveUpdate()">Save</button></div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+  const token = localStorage.getItem('civicpulse_token');
+  const user = JSON.parse(localStorage.getItem('civicpulse_user') || '{}');
+  if (!token || user.role !== 'ADMIN') window.location.href = '/dashboard.html';
+  document.getElementById('adminName').textContent = user.username;
+
+  let grievances = [];
+  let officerUsernames = [];
+  let currentId = null;
+
+  async function loadData() {
+    try {
+      const auth = { headers: { 'Authorization': 'Bearer ' + token } };
+      const [sRes, lRes, oRes] = await Promise.all([
+        fetch('/api/module3/grievances/stats', auth),
+        fetch('/api/module3/grievances/all', auth),
+        fetch('/api/module3/grievances/officers', auth)
+      ]);
+      const stats = await sRes.json();
+      grievances = await lRes.json();
+      officerUsernames = await oRes.json();
+
+      document.getElementById('sTotal').textContent = stats.total || 0;
+      document.getElementById('sPending').textContent = stats.pending || 0;
+      document.getElementById('sProgress').textContent = stats.inProgress || 0;
+      document.getElementById('sResolved').textContent = stats.resolved || 0;
+      document.getElementById('sHigh').textContent = stats.high || 0;
+      document.getElementById('sCritical').textContent = stats.critical || 0;
+
+      const oSelect = document.getElementById('fOfficer');
+      oSelect.innerHTML = '<option value="">Unassigned</option>' + 
+        officerUsernames.map(u => `<option value="${u}">${u}</option>`).join('');
+
+      renderTable(grievances);
+    } catch (err) { showToast('Error loading data'); }
+  }
+
+  function renderTable(list) {
+    const tbody = document.getElementById('grievanceTable');
+    tbody.innerHTML = list.map(g => `
+      <tr>
+        <td>#${g.id}</td>
+        <td><b>${g.title}</b><br><small>${g.citizenUsername}</small></td>
+        <td>${g.category}</td>
+        <td><span class="badge s-${g.status}">${g.status}</span></td>
+        <td>${g.assignedOfficer || '—'}</td>
+        <td><button class="action-btn" onclick="openModal(${g.id})">Manage</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function applyFilters() {
+    const s = document.getElementById('searchInput').value.toLowerCase();
+    const st = document.getElementById('statusFilter').value;
+    const filtered = grievances.filter(g => 
+      (!s || g.title.toLowerCase().includes(s) || g.citizenUsername.toLowerCase().includes(s)) &&
+      (!st || g.status === st)
+    );
+    renderTable(filtered);
+  }
+
+  function openModal(id) {
+    const g = grievances.find(x => x.id === id);
+    if (!g) return;
+    currentId = id;
+    document.getElementById('modalTitle').textContent = 'Manage #' + id;
+    document.getElementById('fStatus').value = g.status;
+    document.getElementById('fPriority').value = g.priority || 'MEDIUM';
+    document.getElementById('fOfficer').value = g.assignedOfficer || '';
+    document.getElementById('fRemarks').value = g.remarks || '';
+    document.getElementById('overlay').classList.add('show');
+  }
+
+  function closeModal() { document.getElementById('overlay').classList.remove('show'); }
+
+  async function saveUpdate() {
+    const payload = {
+      status: document.getElementById('fStatus').value,
+      priority: document.getElementById('fPriority').value,
+      assignedOfficer: document.getElementById('fOfficer').value,
+      remarks: document.getElementById('fRemarks').value
+    };
+    try {
+      const res = await fetch(`/api/module3/grievances/${currentId}/admin-update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) { showToast('Updated!'); closeModal(); loadData(); }
+      else showToast('Update failed');
+    } catch (err) { showToast('Server error'); }
+  }
+
+  function showToast(m) { const t = document.getElementById('toast'); t.textContent = m; t.style.display = 'block'; setTimeout(()=>t.style.display='none', 3000); }
+  function logout() { localStorage.clear(); window.location.href = '/index.html'; }
+
+  loadData();
+</script>
+</body>
+</html>

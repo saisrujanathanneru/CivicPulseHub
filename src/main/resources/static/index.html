@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CivicPulse – Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* === FIXES: straighten layout & prevent left-edge misalignment === */
+html, body { overflow-x: hidden; }
+
+/* Ensure grid doesn't cause fractional pixel shift on some screens */
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  max-width: 100vw;
+}
+
+/* Prevent hero bg from causing left “drag” due to overflow artifacts */
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--ink);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px 52px;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* ============================== */
+/* ORIGINAL STYLES (UNCHANGED)    */
+/* ============================== */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #0d1117; --ink-soft: #3d4451; --surface: #f7f8fa; --panel: #ffffff;
+  --accent: #1a56db; --accent-hover: #1641b0; --accent-light: #e8effd;
+  --citizen: #0ea5e9; --admin: #8b5cf6; --officer: #10b981;
+  --border: #e2e6ee; --shadow: 0 4px 24px rgba(13,17,23,0.09);
+}
+
+html, body {
+  height: 100%;
+  font-family: 'DM Sans', sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 10% 90%, rgba(26,86,219,0.35) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 50% at 90% 10%, rgba(16,185,129,0.18) 0%, transparent 50%);
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.hero-content { position: relative; z-index: 2; }
+
+.logo-mark { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 64px; }
+
+.logo-icon {
+  width: 44px; height: 44px; background: var(--accent); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.logo-icon svg { width: 24px; height: 24px; fill: white; }
+
+.logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem; color: white; }
+
+.hero-headline {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 3rem;
+  line-height: 1.1; color: white; letter-spacing: -0.03em; margin-bottom: 20px;
+}
+
+.hero-headline span {
+  background: linear-gradient(135deg, #60a5fa, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.6;
+  max-width: 360px;
+}
+
+.hero-stats {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.stat { background: rgba(255,255,255,0.04); padding: 20px 18px; }
+.stat-num {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.6rem;
+  color: white;
+  display: block;
+}
+.stat-label {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+  display: block;
+}
+
+.auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  background: var(--panel);
+}
+
+.auth-box {
+  width: 100%;
+  max-width: 420px;
+  animation: slideUp 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.auth-header { margin-bottom: 36px; }
+.auth-title {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.75rem;
+  color: var(--ink); letter-spacing: -0.02em; margin-bottom: 6px;
+}
+.auth-sub { color: var(--ink-soft); font-size: 0.92rem; }
+
+.tab-bar {
+  display: flex; gap: 4px; background: var(--surface); border-radius: 12px;
+  padding: 4px; margin-bottom: 28px;
+}
+
+.tab-btn {
+  flex: 1; padding: 9px 0; border: none; background: transparent; border-radius: 9px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500;
+  color: var(--ink-soft); cursor: pointer; transition: all 0.2s;
+}
+
+.tab-btn.active { background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-weight: 600; }
+
+.role-selector { display: flex; gap: 8px; margin-bottom: 22px; }
+
+.role-pill {
+  flex: 1; padding: 10px 6px; border: 2px solid var(--border); border-radius: 10px;
+  background: transparent; text-align: center; cursor: pointer;
+  transition: all 0.18s;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+
+.role-pill:hover { border-color: var(--accent); }
+
+.role-pill.active[data-role="CITIZEN"] { border-color: var(--citizen); background: rgba(14,165,233,0.07); }
+.role-pill.active[data-role="ADMIN"]   { border-color: var(--admin);   background: rgba(139,92,246,0.07); }
+.role-pill.active[data-role="OFFICER"] { border-color: var(--officer); background: rgba(16,185,129,0.07); }
+
+.role-emoji { font-size: 1.4rem; }
+.role-name {
+  font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+}
+.role-pill.active .role-name { color: var(--ink); }
+
+.form-group { margin-bottom: 16px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+label {
+  display: block; font-size: 0.82rem; font-weight: 600;
+  color: var(--ink); margin-bottom: 6px;
+}
+
+input {
+  width: 100%; padding: 11px 14px; border: 2px solid var(--border); border-radius: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: var(--ink);
+  background: var(--surface); transition: border-color 0.18s, box-shadow 0.18s;
+  outline: none;
+}
+input:focus {
+  border-color: var(--accent); background: white;
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+input::placeholder { color: #b0b7c3; }
+
+.btn-primary {
+  width: 100%; padding: 13px; background: var(--accent); color: white;
+  border: none; border-radius: 10px;
+  font-family: 'Syne', sans-serif; font-size: 0.95rem;
+  font-weight: 700; cursor: pointer;
+  transition: background 0.18s, transform 0.1s, box-shadow 0.18s;
+  letter-spacing: 0.01em; margin-top: 4px;
+}
+.btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 16px rgba(26,86,219,0.35); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.alert {
+  padding: 12px 14px; border-radius: 10px; font-size: 0.85rem;
+  margin-bottom: 16px; display: none; animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.alert.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.alert.success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.alert.show { display: block; }
+
+.form-section { display: none; }
+.form-section.active { display: block; }
+
+.divider { text-align: center; font-size: 0.78rem; color: #b0b7c3; margin: 20px 0 0; }
+
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.4); border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle; margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  .page { grid-template-columns: 1fr; }
+  .hero { display: none; }
+  .auth-panel { padding: 32px 24px; }
+}
+  </style>
+</head>
+<body>
+<div class="page">
+  <!-- LEFT HERO -->
+  <div class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-content">
+      <div class="logo-mark">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        </div>
+        <span class="logo-text">CivicPulse</span>
+      </div>
+      <h1 class="hero-headline">Smart City.<br><span>Real People.</span><br>Real Change.</h1>
+      <p class="hero-sub">Submit grievances, track civic issues, and collaborate with municipal authorities — all from one unified portal.</p>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-num">3</span><span class="stat-label">User Roles</span></div>
+      <div class="stat"><span class="stat-num">8+</span><span class="stat-label">Categories</span></div>
+      <div class="stat"><span class="stat-num">SLA</span><span class="stat-label">Tracked</span></div>
+    </div>
+  </div>
+
+  <!-- RIGHT AUTH PANEL -->
+  <div class="auth-panel">
+    <div class="auth-box">
+      <div class="auth-header">
+        <h2 class="auth-title">Welcome back</h2>
+        <p class="auth-sub">Sign in to your account or create a new one</p>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+        <button class="tab-btn" onclick="switchTab('register')">Register</button>
+      </div>
+      <div id="alert" class="alert"></div>
+
+      <!-- LOGIN -->
+      <div id="loginSection" class="form-section active">
+        <div class="form-group">
+          <label>Username</label>
+          <input id="loginUsername" type="text" placeholder="Enter your username" autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input id="loginPassword" type="password" placeholder="Enter your password" autocomplete="current-password"/>
+        </div>
+        <button class="btn-primary" id="loginBtn" onclick="handleLogin()">Sign In →</button>
+        <p class="divider">Secured with JWT authentication</p>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="registerSection" class="form-section">
+        <div style="margin-bottom:18px">
+          <label style="margin-bottom:10px">Select Your Role</label>
+          <div class="role-selector">
+            <div class="role-pill active" data-role="CITIZEN" onclick="selectRole(this)">
+              <span class="role-emoji">🏘️</span>
+              <span class="role-name">Citizen</span>
+            </div>
+            <div class="role-pill" data-role="ADMIN" onclick="selectRole(this)">
+              <span class="role-emoji">🛡️</span>
+              <span class="role-name">Admin</span>
+            </div>
+            <div class="role-pill" data-role="OFFICER" onclick="selectRole(this)">
+              <span class="role-emoji">👷</span>
+              <span class="role-name">Officer</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input id="regUsername" type="text" placeholder="Choose a username"/>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email</label>
+            <input id="regEmail" type="email" placeholder="email@example.com"/>
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input id="regPhone" type="tel" placeholder="+91 XXXXX"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input id="regPassword" type="password" placeholder="Create a strong password"/>
+        </div>
+        <button class="btn-primary" id="registerBtn" onclick="handleRegister()">Create Account →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedRole = 'CITIZEN';
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+      b.classList.toggle('active', (tab==='login'&&i===0)||(tab==='register'&&i===1));
+    });
+    document.getElementById('loginSection').classList.toggle('active', tab==='login');
+    document.getElementById('registerSection').classList.toggle('active', tab==='register');
+    hideAlert();
+    const title = document.querySelector('.auth-title');
+    const sub   = document.querySelector('.auth-sub');
+    if (tab === 'login') { title.textContent = 'Welcome back'; sub.textContent = 'Sign in to your account or create a new one'; }
+    else                 { title.textContent = 'Create account'; sub.textContent = 'Join CivicPulse and make your city better'; }
+  }
+
+  function selectRole(el) {
+    document.querySelectorAll('.role-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    selectedRole = el.dataset.role;
+  }
+
+  function showAlert(msg, type) {
+    const el = document.getElementById('alert');
+    el.textContent = msg;
+    el.className = `alert ${type} show`;
+  }
+  function hideAlert() { document.getElementById('alert').className = 'alert'; }
+
+  function setLoading(btnId, loading, label) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.innerHTML = loading ? '<span class="spinner"></span>Please wait…' : label;
+  }
+
+  async function handleLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!username || !password) { showAlert('Please enter your username and password.', 'error'); return; }
+    setLoading('loginBtn', true, 'Sign In →');
+    hideAlert();
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (!res.ok) { showAlert(data.error || 'Login failed.', 'error'); return; }
+      localStorage.setItem('civicpulse_token', data.token);
+      localStorage.setItem('civicpulse_user', JSON.stringify({ username: data.username, role: data.role }));
+      showAlert('✓ Login successful! Redirecting…', 'success');
+      setTimeout(() => { window.location.href = '/dashboard.html'; }, 900);
+    } catch (err) {
+      showAlert('Server unreachable. Is Spring Boot running on port 8080?', 'error');
+    } finally { setLoading('loginBtn', false, 'Sign In →'); }
+  }
+
+  async function handleRegister() {
+    const username = document.getElementById('regUsername').value.trim();
+    const email    = document.getElementById('regEmail').value.trim();
+    const phone    = document.getElementById('regPhone').value.trim();
+    const password = document.getElementById('regPassword').value;
+    if (!username || !password || !email) { showAlert('Username, email, and password are required.', 'error'); return; }
+    if (password.length < 6) { showAlert('Password must be at least 6 characters.', 'error'); return; }
+    setLoading('registerBtn', true, 'Create Account →');
+    hideAlert();
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role: selectedRole, email, phone })
+      });
+      const data = await res.json();
+      if (!res.ok) { showAlert(data.error || 'Registration failed.', 'error'); return; }
+      localStorage.setItem('civicpulse_token', data.token);
+      localStorage.setItem('civicpulse_user', JSON.stringify({ username: data.username, role: data.role }));
+      showAlert(`✓ Account created as ${data.role}! Redirecting…`, 'success');
+      setTimeout(() => { window.location.href = '/dashboard.html'; }, 900);
+    } catch (err) {
+      showAlert('Server unreachable. Is Spring Boot running on port 8080?', 'error');
+    } finally { setLoading('registerBtn', false, 'Create Account →'); }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    if (document.getElementById('loginSection').classList.contains('active')) handleLogin();
+    else handleRegister();
+  });
+
+  if (localStorage.getItem('civicpulse_token')) window.location.href = '/dashboard.html';
+</script>
+</body>
+</html>
